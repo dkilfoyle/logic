@@ -89,21 +89,23 @@ const signalDefParser = A.contextual(function*() {
   return { names, type };
 });
 
+const lazy = parserThunk =>
+  new A.Parser(parserState => {
+    const parser = parserThunk();
+    return parser.parserStateTransformerFn(parserState);
+  });
+
 const logicOperator = ws(
   A.choice([A.str("and"), A.str("nand"), A.str("or"), A.str("nor")])
 );
 
-const primary = A.choice([identifier, betweenRoundBrackets(expression)]);
+const primary = lazy(() =>
+  A.choice([identifier, betweenRoundBrackets(expression)])
+);
 
-// const factor = A.choice([primary, A.sequenceOf([A.str("not"), ws(primary)])]);
-
-const factor = A.contextual(function*() {
-  const mynot = yield A.possibly(A.str("not"));
-  console.log(mynot);
-  const id = yield ws(primary);
-  console.log(id);
-  return ["not", id];
-});
+const factor = lazy(() =>
+  A.choice([A.sequenceOf([A.str("not"), ws(primary)]), primary])
+);
 
 const expression = A.sequenceOf([
   factor,
