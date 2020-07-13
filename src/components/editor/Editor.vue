@@ -26,8 +26,9 @@ import "codemirror/addon/fold/foldcode.js";
 import "codemirror/addon/fold/foldgutter.js";
 import "codemirror/addon/fold/foldgutter.css";
 
-import circuitParser from "./parser.js";
+import vlgParser from "./vlgParser.js";
 import vhdlMode from "./vhdlMode.js";
+import vlgMode from "./vlgMode.js";
 
 import "codemirror/lib/codemirror.css";
 // import "codemirror/theme/base16-dark.css";
@@ -45,7 +46,7 @@ export default {
       cmOptions: {
         tabSize: 2,
         indentUnit: 2,
-        mode: "vhdl",
+        mode: "vlg",
         theme: "monokai",
         lineNumbers: true,
         line: true,
@@ -79,23 +80,64 @@ export default {
       //   gated_clk = and(clock, E)
       //   DFF1      = call(DFF, gated_clk, A)
       // `
-      sourceCode: `entity T01 is
-  port (A, B, C : in bit;
-        F       : out bit);
-end entity;
+      sourceCode: `module SingleStage (
+	 input a,
+	 input b,
+	 input cin,
+	 output s,
+	 output cout );
+	 
+	 wire w1, w2, w3;
+	 
+	 and( w1, a, b );
+	 and( w2, a, cin );
+	 and( w3, b, cin );
+	 or( cout, w1, w2, w3 );
 
-architecture sim of T01 is
-signal An : bit;
-begin
-An <= not A;
-end architecture;`
+	 xor( s, a, b, cin );
+
+endmodule
+
+module main;
+  wire a, b, cin, sum, cout;
+
+  SingleStage uut(
+		.a(a), 
+		.b(b), 
+		.cin(cin), 
+		.s(sum), 
+		.cout(cout)
+	);
+
+	test begin
+		#0  {a=0, b=0, cin=0};
+    #2  {a=0, b=0, cin=0};
+    #4  {a=0, b=0, cin=1};
+    #6  {a=0, b=1, cin=0};
+    #8  {a=0, b=1, cin=1};
+    #10 {a=1, b=0, cin=0};
+    #12 {a=1, b=0, cin=1};
+    #14 {a=1, b=1, cin=0};
+    #16 {a=1, b=1, cin=1};
+	end
+endmodule
+`
+      // entity T01 is
+      //   port (A, B, C : in bit;
+      //         F       : out bit);
+      // end entity;
+
+      // architecture sim of T01 is
+      // signal An : bit;
+      // begin
+      // An <= not A;
+      // end architecture;
     };
   },
 
   methods: {
     compile() {
-      const parse = circuitParser(this.codemirror.getDoc().getValue())
-        .parseState;
+      const parse = vlgParser(this.codemirror.getDoc().getValue()).parseState;
       if (parse.isError) {
         this.compileState = "error";
         console.log("Error");

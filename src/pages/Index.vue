@@ -38,9 +38,10 @@
 <script>
 import Editor from "../components/editor/Editor";
 import Graph from "../components/graph";
+import vlgWalker from "./vlgWalker.js";
+
 export default {
   name: "PageIndex",
-
   components: {
     Editor,
     Graph
@@ -58,66 +59,7 @@ export default {
   methods: {
     processAST(parseTree) {
       console.log("index onCompile:", parseTree);
-      this.parseTree = parseTree;
-      this.functions = this.parseTree
-        .map(x => ({
-          name: x.value.id,
-          args: x.value.args,
-          code: x.value.code.map(y => {
-            if (y.type == "controlled") {
-              return {
-                type: "controlled",
-                id: y.value.id
-              };
-            }
-            return {
-              type: y.type == "call" ? "call" : y.value.op.op,
-              id: y.value.id,
-              args: y.value.op.args
-            };
-          })
-        }))
-        .reduce((obj, item) => {
-          return {
-            ...obj,
-            [item["name"]]: item
-          };
-        }, {});
-
-      console.log(this.functions);
-
-      const callFunction = (functionName, namespace, inputs) => {
-        // map call inputs into function arguments
-        const vars = inputs.reduce((acc, cur, i) => {
-          acc[this.functions[functionName].args[i]] = cur;
-          return acc;
-        }, {});
-
-        return this.functions[functionName].code.map(expression => {
-          if (expression.type == "call") {
-            return callFunction(
-              expression.args[0],
-              expression.id,
-              expression.args
-                .slice(1)
-                .map(x => (vars[x] ? vars[x] : namespace + "." + x))
-            );
-          } else {
-            return {
-              group: namespace,
-              id: namespace + "." + expression.id,
-              inputs: expression.args
-                ? expression.args.map(x =>
-                    vars[x] ? vars[x] : namespace + "." + x
-                  )
-                : null,
-              logic: expression.type
-            };
-          }
-        });
-      };
-
-      this.gates = callFunction("main", "main", []).flat();
+      this.gates = vlgWalker(parseTree);
       console.log(this.gates);
     }
   },
