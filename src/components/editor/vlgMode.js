@@ -10,7 +10,7 @@ CodeMirror.defineSimpleMode("vlg", {
       token: "def"
     },
     {
-      regex: /(?:and|or|xor|nand)\b/,
+      regex: /(?:and|or|xor|nand|control)\b/,
       token: "keyword"
     },
     {

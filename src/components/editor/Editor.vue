@@ -1,14 +1,22 @@
 <template>
-  <div>
-    <codemirror
-      ref="cmEditor"
-      v-model="sourceCode"
-      :options="cmOptions"
-    ></codemirror>
-
-    <div class="row q-pa-md">
-      <q-btn @click="compile" :icon-right="compileIcon" label="Compile"></q-btn>
-    </div>
+  <div class="q-pa-md q-gutter-md">
+    <q-card>
+      <q-card-section>
+        <codemirror
+          ref="cmEditor"
+          v-model="sourceCode"
+          :options="cmOptions"
+        ></codemirror>
+      </q-card-section>
+      <q-separator></q-separator>
+      <q-card-section>
+        <q-btn
+          @click="compile"
+          :icon-right="compileIcon"
+          label="Compile"
+        ></q-btn>
+      </q-card-section>
+    </q-card>
   </div>
 </template>
 
@@ -44,6 +52,7 @@ export default {
     return {
       // code: exampleCode,
       cmOptions: {
+        viewportMargin: Infinity,
         tabSize: 2,
         indentUnit: 2,
         mode: "vlg",
@@ -66,20 +75,6 @@ export default {
         foldGutter: true
       },
       compileState: "uncompiled",
-      //       sourceCode: `function DFF(clk, d_in):
-      //   not_d_in  = not(d_in)
-      //   d_nand_a  = nand(d_in, clk)
-      //   q         = nand(d_nand_a, q_)
-      //   d_nand_c  = nand(not_d_in, clk)
-      //   q_        = nand(d_nand_c, q)
-
-      // function main():
-      //   clock     = controlled
-      //   A         = controlled
-      //   E         = controlled
-      //   gated_clk = and(clock, E)
-      //   DFF1      = call(DFF, gated_clk, A)
-      // `
       sourceCode: `module SingleStage (
 	 input a,
 	 input b,
@@ -129,16 +124,6 @@ module main(
 	end
 endmodule
 `
-      // entity T01 is
-      //   port (A, B, C : in bit;
-      //         F       : out bit);
-      // end entity;
-
-      // architecture sim of T01 is
-      // signal An : bit;
-      // begin
-      // An <= not A;
-      // end architecture;
     };
   },
 
@@ -168,4 +153,8 @@ endmodule
 };
 </script>
 
-<style></style>
+<style>
+.CodeMirror {
+  height: 60vh;
+}
+</style>

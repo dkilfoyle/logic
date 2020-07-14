@@ -1,91 +1,130 @@
 <template>
-  <div ref="graph"></div>
+  <div class="q-pa-md q-gutter-md">
+    <q-card
+      ><q-card-section>
+        <q-btn @click="redraw" label="Redraw"></q-btn>
+        <q-radio v-model="layout" val="force" label="Force"></q-radio
+        ><q-radio v-model="layout" val="dagre" label="Dagre"></q-radio>
+        <q-slider
+          v-if="layout == 'force'"
+          v-model="linkDistance"
+          :min="10"
+          :max="300"
+          :step="25"
+        ></q-slider>
+        <q-checkbox v-model="showNodeLabels" label="Node Labels"></q-checkbox>
+      </q-card-section>
+      <q-separator />
+      <q-card-section> <div ref="graph"></div></q-card-section
+    ></q-card>
+  </div>
 </template>
 
 <script>
 import G6 from "@antv/g6";
 
-G6.registerNode("and", {
-  draw(cfg, group) {
-    // If there is style object in cfg, it should be mixed here
-    const keyShape = group.addShape("path", {
-      attrs: {
-        path: this.getPath(cfg), // Get the path by cfg
-        stroke: cfg.color // Apply the color to the stroke. For filling, use fill: cfg.color instead
-      },
-      // must be assigned in G6 3.3 and later versions. it can be any value you want
-      name: "path-shape",
-      // allow the shape to response the drag events
-      draggable: true
-    });
-    if (cfg.label) {
-      // If the label exists
-      // The complex label configurations can be defined by labeCfg
-      // const style = (cfg.labelCfg && cfg.labelCfg.style) || {};
-      // style.text = cfg.label;
-      const label = group.addShape("text", {
-        attrs: {
-          x: 0, // center
-          y: 0,
-          textAlign: "center",
-          textBaseline: "middle",
-          text: cfg.label,
-          fill: "#666"
-        },
-        // must be assigned in G6 3.3 and later versions. it can be any value you want
-        name: "text-shape",
-        // allow the shape to response the drag events
-        draggable: true
-      });
-    }
-    return keyShape;
-  },
-  // Return the path of a diamond
-  getPath(cfg) {
-    const size = cfg.size || [40, 40];
-    const width = size[0];
-    const height = size[1];
-    //  / 1 \
-    // 4     2
-    //  \ 3 /
-    const path = [
-      ["M", 34, 3.5],
-      ["L", 34, 5],
-      ["L", 34, 75],
-      ["L", 34, 76.5],
-      ["L", 35.5, 76.5],
-      ["C", 55.6316, 76.5, 72, 60.1316, 72, 40],
-      ["C", 72, 19.8684, 55.6316, 3.5, 35.5, 3.5],
-      ["L", 34, 3.5],
-      ["Z"]
-    ];
-    return path;
-  }
-});
-
 export default {
   // name: 'ComponentName',
-  props: ["graphData", "graphConfig"],
+  props: ["gates", "instances"],
   data() {
     return {
-      graph: null
+      graph: null,
+      layout: "dagre",
+      showNodeLabels: false,
+      linkDistance: 150
     };
   },
   watch: {
-    graphData: function() {
-      this.graph.data(this.graphData);
+    graphData: function(val) {
+      console.log("graphData Watch");
+      this.graph.data(val);
       this.graph.render();
     },
+    graphConfig: function(val) {
+      console.log("graphConfig Watch");
+      this.graph.updateLayout(val.layout);
+    }
+  },
+  methods: {
+    redraw: function() {
+      console.log("redraw");
+      this.graph.data(this.graphData);
+      this.graph.render();
+    }
+  },
+  computed: {
     graphConfig: function() {
-      this.graph.updateLayout(this.graphConfig.layout);
+      if (this.layout == "force")
+        return {
+          layout: {
+            type: "force",
+            preventOverlap: true,
+            linkDistance: this.linkDistance
+          }
+        };
+      if (this.layout == "dagre") {
+        return {
+          layout: {
+            type: "dagre",
+            rankdir: "LR",
+            align: "DL",
+            nodesepFunc: () => 1,
+            ranksepFunc: () => 1
+          }
+        };
+      }
+      return { layout: { type: "force" } };
+    },
+    graphData: function() {
+      if (this.gates) {
+        const graphData = {
+          nodes: this.gates.map(x => ({
+            id: x.id,
+            label: this.showNodeLabels
+              ? x.id.substring(x.id.lastIndexOf(".") + 1)
+              : null,
+            description: x.id,
+            type: "image",
+            img: "statics/" + x.logic + ".png",
+            comboId: x.instance
+          })),
+          edges: this.gates
+            .map(gate => {
+              if (gate.inputs) {
+                return gate.inputs.map(input => ({
+                  source: input,
+                  target: gate.id
+                }));
+              } else return null;
+            })
+            .flat()
+            .filter(x => x),
+          combos: this.instances.map(i => {
+            const parentId = i.id.substring(0, i.id.lastIndexOf("."));
+            const level = i.id.split(".").length - 1;
+            const x = {
+              id: i.id,
+              label: i.id.substring(i.id.lastIndexOf(".") + 1),
+              style: { fillOpacity: level * 20 }
+            };
+            if (parentId != "") x.parentId = parentId;
+            return x;
+          })
+        };
+        console.log("graphData Computed: ", graphData);
+        return graphData;
+      }
+      return {};
     }
   },
   mounted() {
     this.graph = new G6.Graph({
       container: this.$refs.graph,
-      width: 900,
+      width: 700,
       height: 600,
+      groupByTypes: false,
       fitView: true,
+      fitViewPadding: 20,
       // renderer: "svg",
       layout: this.graphConfig.layout,
       defaultNode: {
@@ -116,7 +155,7 @@ export default {
         type: "polyline",
         // configure the bending radius and min distance to the end nodes
         style: {
-          radius: 10,
+          radius: 5,
           offset: 30,
           endArrow: true,
           startArrow: false,
@@ -126,6 +165,19 @@ export default {
       defaultCombo: {
         type: "rect"
       },
+      nodeStateStyles: {
+        active: {
+          opacity: 1
+        },
+        inactive: {
+          opacity: 0.2
+        }
+      },
+      edgeStateStyles: {
+        active: {
+          stroke: "#999"
+        }
+      },
       modes: {
         default: [
           "drag-node",
@@ -133,6 +185,7 @@ export default {
           "drag-combo",
           "collapse-expand-combo",
           "zoom-canvas",
+          "activate-relations",
           {
             type: "tooltip",
             formatText: function formatText(model) {

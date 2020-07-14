@@ -1,35 +1,27 @@
 <template>
   <q-page class="doc">
     <div class="q-pa-md row items-start q-gutter-md justify-center">
-      <div class="col"><editor @onCompile="processAST"></editor></div>
-    </div>
-
-    <div class="q-pa-md row items-start q-gutter-md justify-center">
       <div class="col">
-        <q-card
-          ><q-card-section>
-            <q-radio v-model="layout" val="force" label="Force"></q-radio
-            ><q-radio v-model="layout" val="dagre" label="Dagre"></q-radio>
-            <q-slider
-              v-if="layout == 'force'"
-              v-model="linkDistance"
-              :min="10"
-              :max="300"
-              :step="25"
-            ></q-slider>
-            <q-checkbox
-              v-model="showNodeLabels"
-              label="Node Labels"
-            ></q-checkbox>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-    <div class="q-pa-md row items-start q-gutter-md justify-center">
-      <div class="col" style="position:relative">
-        <q-card
-          ><graph :graphData="astGraphData" :graphConfig="graphConfig"></graph
-        ></q-card>
+        <q-tabs inline-label v-model="tab">
+          <q-tab name="code" label="Code"></q-tab>
+          <q-tab name="gates" label="Gates" :disable="!gates.length"></q-tab>
+          <q-tab
+            name="graph"
+            label="Schematic"
+            :disable="!gates.length"
+          ></q-tab>
+        </q-tabs>
+        <q-tab-panels v-model="tab">
+          <q-tab-panel name="code" key="code"
+            ><editor @onCompile="processAST"></editor
+          ></q-tab-panel>
+          <q-tab-panel name="gates" key="gates"
+            ><gates :gates="gates" :instances="instances"></gates
+          ></q-tab-panel>
+          <q-tab-panel name="graph" key="graph"
+            ><graph :gates="gates" :instances="instances"
+          /></q-tab-panel>
+        </q-tab-panels>
       </div>
     </div>
   </q-page>
@@ -38,23 +30,23 @@
 <script>
 import Editor from "../components/editor/Editor";
 import Graph from "../components/graph";
+import Gates from "../components/gates";
 import vlgWalker from "./vlgWalker.js";
 
 export default {
   name: "PageIndex",
   components: {
     Editor,
-    Graph
+    Graph,
+    Gates
   },
   data() {
     return {
+      tab: "code",
       layout: "dagre",
-      showNodeLabels: false,
-      linkDistance: 150,
       parseTree: null,
-      functions: null,
-      gates: null,
-      instances: null
+      gates: [],
+      instances: []
     };
   },
   methods: {
@@ -64,79 +56,6 @@ export default {
       this.instances = [...walk.instances];
       this.gates = [...walk.gates];
       console.log(this.gates);
-    }
-  },
-  computed: {
-    graphConfig: function() {
-      if (this.layout == "force")
-        return {
-          layout: {
-            type: "force",
-            preventOverlap: true,
-            linkDistance: this.linkDistance
-          }
-        };
-      if (this.layout == "dagre") {
-        return {
-          layout: {
-            type: "dagre",
-            rankdir: "LR",
-            align: "DL",
-            nodesepFunc: () => 1,
-            ranksepFunc: () => 1
-          }
-        };
-      }
-      return { layout: { type: "force" } };
-    },
-    astGraphData3: function() {
-      if (this.instances) {
-        const graphData = {
-          nodes: this.instances.map(i => ({
-            id: i.id
-          }))
-        };
-      }
-      return [];
-    },
-    astGraphData: function() {
-      if (this.gates) {
-        const graphData = {
-          nodes: this.gates.map(x => ({
-            id: x.id,
-            label: this.showNodeLabels
-              ? x.id.substring(x.id.lastIndexOf(".") + 1)
-              : null,
-            description: x.id,
-            type: "image",
-            img: "statics/" + x.logic + ".png",
-            comboId: x.instance
-          })),
-          edges: this.gates
-            .map(gate => {
-              if (gate.inputs) {
-                return gate.inputs.map(input => ({
-                  source: input,
-                  target: gate.id
-                }));
-              } else return null;
-            })
-            .flat()
-            .filter(x => x),
-          combos: this.instances.map(i => {
-            const x = {
-              id: i.id,
-              label: i.id.substring(i.id.lastIndexOf(".") + 1)
-            };
-            const parentId = i.id.substring(0, i.id.lastIndexOf("."));
-            if (parentId != "") x.parentId = parentId;
-            return x;
-          })
-        };
-        console.log(graphData);
-        return graphData;
-      }
-      return {};
     }
   }
 };
