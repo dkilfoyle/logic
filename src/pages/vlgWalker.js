@@ -1,25 +1,36 @@
-var modules, mygates;
+var modules, instances, gates;
 
 const createInstance = (parentNamespace, instance) => {
+  // instance of main will have empty parentNamespace
+  if (parentNamespace !== "") parentNamespace = parentNamespace + ".";
+
   const varMap = instance.params.reduce((acc, param) => {
-    acc[param.param] = parentNamespace + "." + param.mapped.id;
+    acc[param.param] = parentNamespace + param.mapped.id;
     return acc;
   }, {});
 
+  instances.push({
+    id: parentNamespace + instance.id,
+    inputs: instance.params.filter(i => i.type == "input"),
+    output: instance.params.filter(i => i.type == "output")
+  });
+
   modules[instance.module].wires.forEach(wire => {
-    varMap[wire] = parentNamespace + "." + instance.id + "." + wire;
+    varMap[wire] = parentNamespace + instance.id + "." + wire;
   });
 
   modules[instance.module].statements.forEach(statement => {
     if (statement.type == "gate") {
-      mygates.push({
-        id: parentNamespace + "." + instance.id + "." + statement.id,
+      gates.push({
+        id: parentNamespace + instance.id + "." + statement.id,
         logic: statement.gate,
-        inputs: statement.params.map(param => varMap[param])
+        inputs: statement.params.map(param => varMap[param]),
+        instance: parentNamespace + instance.id,
+        state: "x"
       });
     }
     if (statement.type == "instance") {
-      createInstance(parentNamespace + "." + instance.id, statement);
+      createInstance(parentNamespace + instance.id, statement);
     }
   });
 };
@@ -34,20 +45,19 @@ const walk = ast => {
     return acc;
   }, {});
 
-  mygates = [];
-  modules.main.wires.forEach(wire =>
-    mygates.push({
-      logic: "controlled",
-      id: "main." + wire,
-      output: undefined
-    })
-  );
+  gates = [];
+  instances = [];
 
-  modules.main.statements.forEach(statement => {
-    if (statement.type == "instance") createInstance("main", statement);
-  });
+  // create an instance of main module
+  const mainInstance = {
+    params: [],
+    id: "main",
+    module: "main"
+  };
 
-  return mygates;
+  createInstance("", mainInstance);
+
+  return { instances, gates };
 };
 
 export default walk;

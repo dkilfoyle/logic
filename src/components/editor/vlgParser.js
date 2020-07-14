@@ -57,7 +57,8 @@ const gateParser = A.contextual(function*() {
     A.str("or"),
     A.str("xor"),
     A.str("nor"),
-    A.str("not")
+    A.str("not"),
+    A.str("control")
   ]);
 
   const params = yield betweenRoundBrackets(commaSeparated(identifier));

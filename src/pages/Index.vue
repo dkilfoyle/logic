@@ -53,13 +53,16 @@ export default {
       linkDistance: 150,
       parseTree: null,
       functions: null,
-      gates: null
+      gates: null,
+      instances: null
     };
   },
   methods: {
     processAST(parseTree) {
       console.log("index onCompile:", parseTree);
-      this.gates = vlgWalker(parseTree);
+      const walk = vlgWalker(parseTree);
+      this.instances = [...walk.instances];
+      this.gates = [...walk.gates];
       console.log(this.gates);
     }
   },
@@ -86,6 +89,16 @@ export default {
       }
       return { layout: { type: "force" } };
     },
+    astGraphData3: function() {
+      if (this.instances) {
+        const graphData = {
+          nodes: this.instances.map(i => ({
+            id: i.id
+          }))
+        };
+      }
+      return [];
+    },
     astGraphData: function() {
       if (this.gates) {
         const graphData = {
@@ -97,7 +110,7 @@ export default {
             description: x.id,
             type: "image",
             img: "statics/" + x.logic + ".png",
-            comboId: x.group
+            comboId: x.instance
           })),
           edges: this.gates
             .map(gate => {
@@ -110,15 +123,15 @@ export default {
             })
             .flat()
             .filter(x => x),
-          combos: this.gates.reduce((acc, cur) => {
-            if (!acc.some(e => e.id === cur.group)) {
-              acc.push({
-                id: cur.group,
-                label: cur.group
-              });
-            }
-            return acc;
-          }, [])
+          combos: this.instances.map(i => {
+            const x = {
+              id: i.id,
+              label: i.id.substring(i.id.lastIndexOf(".") + 1)
+            };
+            const parentId = i.id.substring(0, i.id.lastIndexOf("."));
+            if (parentId != "") x.parentId = parentId;
+            return x;
+          })
         };
         console.log(graphData);
         return graphData;

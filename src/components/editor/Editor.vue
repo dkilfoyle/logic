@@ -98,8 +98,15 @@ export default {
 
 endmodule
 
-module main;
-  wire a, b, cin, sum, cout;
+module main(
+  output sum,
+  output cout);
+
+  wire a, b, cin;
+
+  control(a);
+  control(b);
+  control(cin);
 
   SingleStage uut(
 		.a(a), 
