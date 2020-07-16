@@ -26,7 +26,7 @@
 import TraceChart from "./traceChart.js";
 
 export default {
-  props: ["gates", "instances"],
+  props: ["simulation", "gates", "instances"],
   components: { TraceChart },
   data() {
     return {
@@ -36,6 +36,17 @@ export default {
 
   methods: {},
   computed: {
+    tracedata: function() {
+      return {
+        labels: simulation.clock.length,
+        datasets: [
+          {
+            label: "main.sum",
+            data: simulation["main.sum"]
+          }
+        ]
+      };
+    },
     selectedInstance: function() {
       return this.instances.find(x => x.id == this.selected);
     },

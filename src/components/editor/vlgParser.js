@@ -130,7 +130,7 @@ const testAssignmentParser = A.contextual(function*() {
   const id = yield ws(identifier);
   yield A.str("=");
   const value = yield ws(A.digits);
-  return { type: "assignment", id, value };
+  return { id, value: parseInt(value, 10) };
 });
 
 const testClockParser = A.contextual(function*() {
@@ -141,7 +141,7 @@ const testClockParser = A.contextual(function*() {
     commaSeparated(ws(testAssignmentParser))
   );
   yield A.str(";");
-  return { time, assignments };
+  return { time: parseInt(time, 10), assignments };
 });
 
 const moduleParser = A.contextual(function*() {

@@ -20,7 +20,11 @@
             ></editor
           ></q-tab-panel>
           <q-tab-panel name="trace" key="trace"
-            ><trace :gates="gates" :instances="instances"></trace
+            ><trace
+              :simulation="simulation"
+              :gates="gates"
+              :instances="instances"
+            ></trace
           ></q-tab-panel>
           <q-tab-panel name="gates" key="gates"
             ><gates :gates="gates" :instances="instances"></gates
@@ -49,6 +53,7 @@ const indexBy = (array, prop) =>
 
 const logicFunctions = {
   not: a => ~a & 1,
+  buffer: a => a,
   and2: (a, b) => a && b,
   nand2: (a, b) => not(a && b),
   or2: (a, b) => a || b,
@@ -66,9 +71,16 @@ const logicFunctions = {
 const evaluate = (components, componentLookup) => {
   const logicOperation = component => {
     let logicFn = component.logic;
-    if (component.inputs.length == 1 && logicFn == "not") {
+    if (component.inputs.length == 1) {
+      if (!(logicFn == "not" || logicFn == "buffer")) {
+        console.log(
+          "Gate evaluation error - 1 input only valid for not and buffer gates"
+        );
+        return;
+      }
       const aOut = componentLookup[component.inputs[0]];
-      component.state = aOut === "x" ? "x" : logicFunctions.not(aOut.state);
+      component.state =
+        aOut === "x" ? "x" : logicFunctions[logicFn](aOut.state);
       return;
     }
 
@@ -113,25 +125,46 @@ export default {
       layout: "dagre",
       parseTree: null,
       gates: [],
-      instances: []
+      instances: [],
+      simulation: {}
     };
   },
   methods: {
     processAST(parseTree) {
+      this.parseTree = parseTree;
       const walk = vlgWalker(parseTree);
       this.instances = [...walk.instances];
       this.gates = [...walk.gates];
     },
     runSimulation() {
       const EVALS_PER_STEP = 5;
+      this.gates.forEach(g => {
+        this.simulation[g] = [];
+      });
+
       var gatesLookup = indexBy(this.gates, "id");
       var instancesLookup = indexBy(this.instances, "id");
+      var modulesLookup = indexBy(this.parseTree, "id");
+
       const maxClock = 17;
+      simulation.clock = [];
       for (let clock = 0; clock < maxClock; clock++) {
+        simulation.clock.push(clock % 2);
+        modulesLookup.main.clock.forEach(c => {
+          if (c.time == clock) {
+            c.assignments.forEach(a => {
+              // can only assign values to control types
+              if (gatesLookup["main." + a.id].logic == "control")
+                gatesLookup["main." + a.id].state = a.value;
+            });
+          }
+        });
         for (let i = 0; i < EVALS_PER_STEP; i++) {
           evaluate(this.gates, gatesLookup);
         }
-        console.log(gatesLookup["main.uut.s"].state);
+        this.gates.forEach(g => {
+          this.simulation[g].push(gatesLookup[g].state);
+        });
       }
     }
   }
