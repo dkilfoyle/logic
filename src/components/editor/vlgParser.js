@@ -58,7 +58,8 @@ const gateParser = A.contextual(function*() {
     A.str("xor"),
     A.str("nor"),
     A.str("not"),
-    A.str("control")
+    A.str("control"),
+    A.str("buffer")
   ]);
 
   const params = yield betweenRoundBrackets(commaSeparated(identifier));
@@ -119,7 +120,7 @@ const arrayDimParser = A.contextual(function*() {
 });
 
 const portParser = A.contextual(function*() {
-  const type = yield A.choice([A.str("input "), A.str("output ")]);
+  const type = yield A.choice([ws(A.str("input")), ws(A.str("output"))]);
   const arrayDim = yield A.possibly(arrayDimParser);
   const id = yield ws(identifier);
   return { type, dim: arrayDim, id };
@@ -171,7 +172,7 @@ const moduleParser = A.contextual(function*() {
   );
 
   const statements = yield A.many(
-    A.choice([gateParser, instanceParser, assignParser])
+    A.choice([ws(gateParser), ws(instanceParser), ws(assignParser)])
   );
 
   var clock;

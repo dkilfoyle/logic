@@ -68,8 +68,10 @@ export default {
             type: "dagre",
             rankdir: "LR",
             align: "DL",
-            nodesepFunc: () => 1,
-            ranksepFunc: () => 1
+            // sortByCombo: true,
+            controlPoints: true
+            // nodesepFunc: () => 1,
+            // ranksepFunc: () => 1
           }
         };
       }
@@ -84,8 +86,11 @@ export default {
               ? x.id.substring(x.id.lastIndexOf(".") + 1)
               : null,
             description: x.id,
-            type: "image",
-            img: "statics/" + x.logic + ".png",
+            type: "circle",
+            icon: {
+              show: true,
+              img: "statics/" + x.logic + ".svg"
+            },
             comboId: x.instance
           })),
           edges: this.gates
@@ -129,11 +134,26 @@ export default {
       layout: this.graphConfig.layout,
       defaultNode: {
         type: "circle",
-        size: 20,
+        size: 30,
+        style: {
+          // fill: "#bae637",
+          // stroke: "#eaff8f",
+          // lineWidth: 5
+        },
+        linkPoints: {
+          top: false,
+          bottom: false,
+          left: false,
+          right: true,
+          fill: "#fff",
+          size: 5
+        },
         anchorPoints: [
-          [0, 0],
-          [0, 1],
+          [0, 0.25],
+          [0, 0.75],
           [0, 0.5],
+          [1, 0.25],
+          [1, 0.75],
           [1, 0.5]
         ],
         sourceAnchor: 3,
@@ -141,7 +161,7 @@ export default {
         clipCfg: {
           show: true,
           type: "circle",
-          r: 15
+          r: 25
         },
         labelCfg: {
           style: {
@@ -152,30 +172,49 @@ export default {
         }
       },
       defaultEdge: {
-        type: "polyline",
+        // type: "polyline",
         // configure the bending radius and min distance to the end nodes
         style: {
-          radius: 5,
-          offset: 30,
-          endArrow: true,
+          // radius: 5,
+          // offset: 30,
+          endArrow: {
+            path: G6.Arrow.triangle(3, 3),
+            d: -4 // offset
+          },
           startArrow: false,
-          stroke: "#F6BD16"
+          stroke: "#999"
+          // stroke: "#F6BD16"
         }
       },
       defaultCombo: {
-        type: "rect"
+        type: "rect",
+        anchorPoints: [
+          [0, 0.25],
+          [0, 0.75],
+          [0, 0.5],
+          [1, 0.5]
+        ],
+        sourceAnchor: 3,
+        targetAnchor: 0
       },
       nodeStateStyles: {
         active: {
           opacity: 1
         },
         inactive: {
-          opacity: 0.2
+          opacity: 0.4
         }
       },
       edgeStateStyles: {
         active: {
-          stroke: "#999"
+          stroke: "#F6BD16",
+          lineWidth: 3,
+          opacity: 1
+        },
+        inactive: {
+          opacity: 0.4,
+          stroke: "#999",
+          lineWidth: 1
         }
       },
       modes: {
@@ -191,8 +230,8 @@ export default {
             formatText: function formatText(model) {
               const text = model.description;
               return text;
-            }
-            // offset: 30
+            },
+            offset: 30
           }
         ]
       }

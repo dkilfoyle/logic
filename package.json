@@ -12,10 +12,12 @@
     "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {
-    "@antv/g6": "^3.5.7",
+    "@antv/g6": "^3.5.10",
     "@quasar/extras": "^1.8.2",
+    "chart.js": "^2.9.3",
     "line-column": "^1.0.2",
     "quasar": "^1.12.4",
+    "vue-chartjs": "^3.5.0",
     "vue-codemirror": "^4.0.6"
   },
   "devDependencies": {

@@ -9,11 +9,17 @@
         ></codemirror>
       </q-card-section>
       <q-separator></q-separator>
-      <q-card-section>
+      <q-card-section class="q-gutter-md">
         <q-btn
           @click="compile"
           :icon-right="compileIcon"
           label="Compile"
+        ></q-btn>
+        <q-btn
+          @click="simulate"
+          icon-right="play_arrow"
+          label="Simulate"
+          :disable="compileState != 'success'"
         ></q-btn>
       </q-card-section>
     </q-card>
@@ -109,7 +115,10 @@ module main(
 		.cin(cin), 
 		.s(sum), 
 		.cout(cout)
-	);
+  );
+
+  buffer(sum);
+  buffer(cout);
 
 	test begin
 		#0  {a=0, b=0, cin=0};
@@ -137,6 +146,9 @@ endmodule
         this.compileState = "success";
         this.$emit("onCompile", parse.result);
       }
+    },
+    simulate() {
+      this.$emit("onSimulate");
     }
   },
   computed: {
