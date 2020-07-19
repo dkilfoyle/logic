@@ -108,9 +108,9 @@ export default {
             rankdir: "LR",
             align: "DL",
             // sortByCombo: true,
-            controlPoints: true
-            // nodesepFunc: () => 1,
-            // ranksepFunc: () => 1
+            controlPoints: true,
+            nodesepFunc: () => 1,
+            ranksepFunc: () => 1
           }
         };
       }
@@ -149,7 +149,7 @@ export default {
             const x = {
               id: i.id,
               label: i.id.substring(i.id.lastIndexOf(".") + 1),
-              style: { fillOpacity: level * 20 }
+              style: { fillOpacity: level * 0.3 }
             };
             if (parentId != "") x.parentId = parentId;
             return x;

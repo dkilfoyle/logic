@@ -81,6 +81,6 @@ export default {
 
 <style>
 .CodeMirror {
-  height: 60vh;
+  height: 50vh;
 }
 </style>

@@ -10,7 +10,7 @@ CodeMirror.defineSimpleMode("vlg", {
       token: "def"
     },
     {
-      regex: /(?:and|or|xor|nand|control|buffer)\b/,
+      regex: /(?:not|and|or|xor|nand|control|buffer)\b/,
       token: "keyword"
     },
     {
@@ -69,7 +69,6 @@ CodeMirror.registerHelper("lint", "vlg", text => {
   if (text == "") return [];
   var found = [];
   const parse = vlgParser(text);
-  console.log(parse.parseState.result);
 
   if (parse.parseState.isError) {
     var finder = lineColumn(text, { origin: 0 });

@@ -11,7 +11,7 @@ const createInstance = (parentNamespace, instance) => {
       globalid: parentNamespace + param.mapped.id,
       type: "port",
       moduleportid: param.param,
-      instanceportid: parentNamespace + instance.id + "." + param.param,
+      instanceid: parentNamespace + instance.id + "." + param.param,
       porttype: instanceModule.ports.find(x => x.id == param.param).type
     };
     return acc;
@@ -20,6 +20,7 @@ const createInstance = (parentNamespace, instance) => {
   instanceModule.wires.forEach(wire => {
     varMap[wire] = {
       globalid: parentNamespace + instance.id + "." + wire,
+      instanceid: parentNamespace + instance.id + "." + wire,
       type: "wire"
     };
   });
@@ -33,9 +34,21 @@ const createInstance = (parentNamespace, instance) => {
         logic: statement.gate,
         inputs: statement.params.map(param => varMap[param].globalid),
         instance: parentNamespace + instance.id,
-        state: "x"
+        state: 0
       });
     });
+
+  var newInstance = {
+    id: parentNamespace + instance.id,
+    inputs: Object.values(varMap).filter(
+      x => x.type == "port" && x.porttype == "input"
+    ),
+    outputs: Object.values(varMap).filter(
+      x => x.type == "port" && x.porttype == "output"
+    ),
+    wires: Object.values(varMap).filter(x => x.type == "wire"),
+    instances: []
+  };
 
   instanceModule.statements
     .filter(x => x.type == "instance")
@@ -47,32 +60,13 @@ const createInstance = (parentNamespace, instance) => {
 
       // connect childInstance outputs to parent instance gates
       // mapped parent must exist as gate, at least as buffer
-
       childInstance.outputs.forEach(o => {
-        gates.find(g => g.id == o.globalid).inputs.push(o.instanceportid);
+        gates.find(g => g.id == o.globalid).inputs.push(o.instanceid);
       });
 
-      // childInstance.outputs.forEach(output => {
-      //   // patch output.portid to params mapped
-      //   var childInstanceParam = childInstance.params.find(
-      //     x => x.param == output.portid
-      //   );
-      //   outputMappings.push({
-      //     portid: childInstanceParam.mapped.id,
-      //     gate: output.gate
-      //   });
-      // });
+      newInstance.instances.push(childInstance.id);
     });
 
-  var newInstance = {
-    id: parentNamespace + instance.id,
-    inputs: Object.values(varMap).filter(
-      x => x.type == "port" && x.porttype == "input"
-    ),
-    outputs: Object.values(varMap).filter(
-      x => x.type == "port" && x.porttype == "output"
-    )
-  };
   instances.push(newInstance);
 
   return newInstance;

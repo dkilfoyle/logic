@@ -27,7 +27,6 @@
               <q-card class="col">
                 <q-tabs
                   v-model="sourceTab"
-                  no-caps
                   dense
                   inline-label
                   align="left"
@@ -35,16 +34,16 @@
                   active-color="primary"
                   indicator-color="primary"
                 >
-                  <q-tab name="onebit" label="1BitAdder"></q-tab>
-                  <q-tab name="flipflop" label="FlipFlop"></q-tab>
+                  <q-tab name="adder" label="Adder"></q-tab>
+                  <q-tab name="dff" label="DFF"></q-tab>
                   <q-tab name="scratch" label="Scratch"></q-tab>
                 </q-tabs>
                 <q-tab-panels v-model="sourceTab" keep-alive>
-                  <q-tab-panel name="onebit" key="onebit" class="q-pa-none"
-                    ><editor v-model="source.onebit"
+                  <q-tab-panel name="adder" key="adder" class="q-pa-none"
+                    ><editor v-model="source.adder"
                   /></q-tab-panel>
-                  <q-tab-panel name="flipflop" key="flipflop" class="q-pa-none"
-                    ><editor v-model="source.flipflop"
+                  <q-tab-panel name="dff" key="dff" class="q-pa-none"
+                    ><editor v-model="source.dff"
                   /></q-tab-panel>
                   <q-tab-panel name="scratch" key="scratch" class="q-pa-none"
                     ><editor v-model="source.scratch"
@@ -76,7 +75,7 @@
                     class="q-pa-sm"
                     style="background-color: black"
                   >
-                    <div id="terminal" style="height:200px"></div>
+                    <div id="terminal" style="height:20vh"></div>
                   </div>
                 </q-card-section>
               </q-card>
@@ -136,6 +135,8 @@ const indexBy = (array, prop) =>
     return output;
   }, {});
 
+const not = x => ~x & 1;
+
 const logicFunctions = {
   not: a => ~a & 1,
   buffer: a => a,
@@ -155,6 +156,7 @@ const logicFunctions = {
 
 const evaluate = (components, componentLookup) => {
   const logicOperation = component => {
+    console.log("LogicOperation: ", component, componentLookup);
     let logicFn = component.logic;
     if (component.inputs.length == 1) {
       if (!(logicFn == "not" || logicFn == "buffer")) {
@@ -192,12 +194,13 @@ const evaluate = (components, componentLookup) => {
 
   components.forEach(component => {
     if (component.logic === "control") return;
+
     return logicOperation(component);
   });
 };
 
-import onebit from "../statics/1bitadder.vlg";
-import flipflop from "../statics/1bitadder.vlg";
+import adder from "../statics/1bitadder.vlg";
+import dff from "../statics/dff.vlg";
 import scratch from "../statics/scratch.vlg";
 
 export default {
@@ -223,8 +226,8 @@ export default {
       },
       tab: "code",
       layout: "dagre",
-      source: { onebit, flipflop: "", scratch },
-      sourceTab: "onebit"
+      source: { adder, dff, scratch },
+      sourceTab: "adder"
     };
   },
   computed: {
@@ -245,7 +248,9 @@ export default {
       this.termWriteln(
         chalk.bold.green("• Compiling: ") + chalk.yellow(this.sourceTab)
       );
+
       const parse = vlgParser(this.source[this.sourceTab]).parseState;
+      console.log("Parse: ", parse);
       if (parse.isError) {
         this.compiled.state = "error";
         this.termWriteln(chalk.red("└── Parser error: ") + parse.error);
@@ -263,6 +268,7 @@ export default {
       );
 
       const walk = vlgWalker(this.compiled.parseTree);
+      console.log("Walk: ", walk);
       this.compiled.instances = [...walk.instances];
       this.compiled.gates = [...walk.gates];
 
@@ -305,11 +311,10 @@ export default {
       var modulesLookup = indexBy(this.compiled.parseTree, "id");
 
       const maxClock = 17;
-      this.compiled.simulation.clock = [];
       this.compiled.simulation.time = [];
+      if (gatesLookup["main.clock"]) gatesLookup["main.clock"].state = 0;
 
       for (let clock = 0; clock < maxClock; clock++) {
-        this.compiled.simulation.clock.push(clock % 2);
         this.compiled.simulation.time.push(clock);
         modulesLookup.main.clock.forEach(c => {
           if (c.time == clock) {
@@ -320,6 +325,10 @@ export default {
             });
           }
         });
+        if (gatesLookup["main.clock"])
+          gatesLookup["main.clock"].state =
+            ~gatesLookup["main.clock"].state & 1;
+
         for (let i = 0; i < EVALS_PER_STEP; i++) {
           evaluate(this.compiled.gates, gatesLookup);
         }

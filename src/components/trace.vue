@@ -4,43 +4,32 @@
       <div class="col-3">
         <div class="text-subtitle2">Instances</div>
         <q-tree
-          :nodes="instanceNodes"
-          node-key="dir"
+          :nodes="instanceTree"
+          node-key="id"
           selected-color="primary"
-          :selected.sync="selected"
+          :selected.sync="instanceID"
           default-expand-all
         />
       </div>
 
       <div class="col-9 q-gutter-md">
         <div class="row">
-          <q-radio v-model="include" val="all" label="All" />
-          <q-radio v-model="include" val="inputs" label="Inputs" />
-          <q-radio v-model="include" val="outputs" label="Outputs" />
-          <q-checkbox v-model="includeClock" label="Clock" />
+          <q-radio v-model="showWhichGates" val="all" label="All" />
+          <q-radio v-model="showWhichGates" val="inputs" label="Inputs" />
+          <q-radio v-model="showWhichGates" val="outputs" label="Outputs" />
         </div>
 
-        <div class="row" v-if="includeClock">
-          <div class="col-9">
-            <trace-chart
-              :chart-data="clockData"
-              :options="traceoptions"
-            ></trace-chart>
-          </div>
-          <div class="col-3">
-            <div class="text-caption">Clock</div>
-          </div>
-        </div>
         <div v-if="selectedInstance">
-          <div class="row" v-for="g in selectedGates" :key="g.id">
+          <div class="row" v-for="g in selectedGates" :key="g.globalid">
             <div class="col-9">
               <trace-chart
-                :chart-data="tracedata(g.id)"
+                :chart-data="tracedata(g.globalid)"
                 :options="traceoptions"
               ></trace-chart>
             </div>
             <div class="col-3">
-              <div class="text-caption">{{ g.id }}</div>
+              <div class="text-caption">{{ g.globalid }}</div>
+              <div class="text-caption">{{ g.instanceid }}</div>
             </div>
           </div>
         </div>
@@ -51,16 +40,14 @@
 
 <script>
 import TraceChart from "./traceChart.js";
+import SelectionMixin from "./selections";
 
 export default {
   props: ["simulation", "gates", "instances"],
+  mixins: [SelectionMixin],
   components: { TraceChart },
   data() {
-    return {
-      selected: "main",
-      include: "all",
-      includeClock: true
-    };
+    return {};
   },
 
   methods: {
@@ -69,6 +56,7 @@ export default {
         labels: this.simulation.time,
         datasets: [
           {
+            ...this.traceColor(id),
             label: id,
             data: this.simulation[id],
             steppedLine: true,
@@ -76,6 +64,18 @@ export default {
           }
         ]
       };
+    },
+    traceColor: function(id) {
+      if (this.selectedInstance.outputs.some(x => x.globalid == id))
+        return {
+          backgroundColor: "rgba(255,99,132,0.2)",
+          borderColor: "rgba(255,99,132,1)"
+        };
+      if (this.selectedInstance.inputs.some(x => x.globalid == id))
+        return {
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          borderColor: "rgba(54, 162, 235, 1)"
+        };
     }
   },
   computed: {
@@ -107,60 +107,8 @@ export default {
           ]
         }
       };
-    },
-    selectedGates: function() {
-      switch (this.include) {
-        case "all":
-          return this.gates.filter(
-            gf => gf.id.slice(0, gf.id.lastIndexOf(".")) == this.selected
-          );
-          break;
-        case "outputs":
-          return this.gates.filter(gf =>
-            this.selectedInstance.outputs.some(x => x.globalid == gf.id)
-          );
-          break;
-        case "inputs":
-          return this.gates.filter(gf =>
-            this.selectedInstance.inputs.some(x => x.globalid == gf.id)
-          );
-          break;
-      }
-      return [];
-    },
-    selectedInstance: function() {
-      return this.instances.find(x => x.id == this.selected);
-    },
-    instanceNodes: function() {
-      const nodeArray = [];
-      const sortedInstances = [...this.instances].sort();
-
-      // TODO: more elegant solution?
-      const nodeFinder = dir => {
-        var parent = nodeArray;
-        dir.forEach((d, dirIndex) => {
-          var foundIndex = nodeArray.findIndex(e => e.label == d);
-          if (foundIndex == -1) {
-            parent.push({
-              label: d,
-              dir: dir.slice(0, dirIndex + 1).join("."),
-              children: []
-            });
-            parent = parent[0].children;
-          } else {
-            parent = parent[foundIndex].children;
-          }
-        });
-      };
-
-      sortedInstances.forEach(i => {
-        nodeFinder(i.id.split("."));
-      });
-
-      return nodeArray;
     }
-  },
-  mounted() {}
+  }
 };
 </script>
 
