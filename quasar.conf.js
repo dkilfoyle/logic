@@ -84,6 +84,10 @@ module.exports = function(/* ctx */) {
             formatter: require("eslint").CLIEngine.getFormatter("stylish")
           }
         });
+        cfg.module.rules.push({
+          test: /\.vlg$/i,
+          use: "raw-loader"
+        });
       }
     },
 
@@ -108,9 +112,9 @@ module.exports = function(/* ctx */) {
       workboxPluginMode: "GenerateSW", // 'GenerateSW' or 'InjectManifest'
       workboxOptions: {}, // only for GenerateSW
       manifest: {
-        name: "Quasar App",
+        name: "Logic",
 
-        short_name: "Quasar App",
+        short_name: "Logic Simulator",
         description: "A Quasar Framework app",
         display: "standalone",
         orientation: "portrait",

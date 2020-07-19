@@ -1,4 +1,4 @@
-import A from "./parserLib.js";
+import A from "./editor/parserLib.js";
 
 // Utility parsers
 // const peek = A.lookAhead(A.regex(/^./));

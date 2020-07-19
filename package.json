@@ -14,11 +14,15 @@
   "dependencies": {
     "@antv/g6": "^3.5.10",
     "@quasar/extras": "^1.8.2",
+    "chalk": "^4.1.0",
     "chart.js": "^2.9.3",
     "line-column": "^1.0.2",
     "quasar": "^1.12.4",
+    "raw-loader": "^4.0.1",
     "vue-chartjs": "^3.5.0",
-    "vue-codemirror": "^4.0.6"
+    "vue-codemirror": "^4.0.6",
+    "xterm": "^4.8.1",
+    "xterm-addon-fit": "^0.4.0"
   },
   "devDependencies": {
     "@quasar/app": "^1.9.6",

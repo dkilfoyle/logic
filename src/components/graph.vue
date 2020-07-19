@@ -23,6 +23,45 @@
 <script>
 import G6 from "@antv/g6";
 
+const lineDash = [4, 2, 1, 2];
+G6.registerEdge(
+  "can-running",
+  {
+    setState(name, value, item) {
+      const shape = item.get("keyShape");
+      if (name === "running") {
+        if (value) {
+          let index = 0;
+          shape.animate(
+            () => {
+              index++;
+              if (index > 9) {
+                index = 0;
+              }
+              const res = {
+                lineDash: [4, 2, 1, 2],
+                lineDashOffset: -index
+              };
+              // return the params for this frame
+              return res;
+            },
+            {
+              repeat: true,
+              duration: 3000
+            }
+          );
+        } else {
+          shape.stopAnimate();
+          shape.attr("lineDash", null);
+        }
+      }
+    }
+  },
+  "cubic-horizontal"
+);
+
+// TODO: Edge animation for running state: https://g6.antv.vision/en/examples/scatter/stateChange
+
 export default {
   // name: 'ComponentName',
   props: ["gates", "instances"],
@@ -158,11 +197,11 @@ export default {
         ],
         sourceAnchor: 3,
         targetAnchor: 0,
-        clipCfg: {
-          show: true,
-          type: "circle",
-          r: 25
-        },
+        // clipCfg: {
+        //   show: true,
+        //   type: "circle",
+        //   r: 25
+        // },
         labelCfg: {
           style: {
             fill: "#1890ff",
@@ -172,6 +211,7 @@ export default {
         }
       },
       defaultEdge: {
+        type: "can-running",
         // type: "polyline",
         // configure the bending radius and min distance to the end nodes
         style: {
@@ -179,7 +219,7 @@ export default {
           // offset: 30,
           endArrow: {
             path: G6.Arrow.triangle(3, 3),
-            d: -4 // offset
+            d: 0 // offset
           },
           startArrow: false,
           stroke: "#999"
@@ -224,7 +264,6 @@ export default {
           "drag-combo",
           "collapse-expand-combo",
           "zoom-canvas",
-          "activate-relations",
           {
             type: "tooltip",
             formatText: function formatText(model) {
@@ -235,6 +274,52 @@ export default {
           }
         ]
       }
+    });
+    this.graph.on("node:mouseenter", ev => {
+      // set all edges to inactive
+      var edges = this.graph.getEdges();
+      edges.forEach(edge => {
+        edge.update({
+          style: {
+            opacity: 0.3
+          }
+        });
+      });
+      // now set edges connected to this node to active style and then change state to running
+      const node = ev.item;
+      edges = node.getEdges();
+      edges.forEach(edge => {
+        edge.update({
+          style: {
+            opacity: 1,
+            lineWidth: 2,
+            endArrow: {
+              path: G6.Arrow.triangle(0, 0, 0), // for some reason endArrow: false doesn't work
+              d: 0 // offset
+            }
+          }
+        });
+        this.graph.setItemState(edge, "running", true);
+      });
+    });
+    this.graph.on("node:mouseleave", ev => {
+      // reset all edges to default
+      var edges = this.graph.getEdges();
+      edges.forEach(edge => {
+        edge.update({
+          style: {
+            opacity: 1,
+            lineWidth: 1,
+            endArrow: {
+              path: G6.Arrow.triangle(4, 4, 0),
+              d: 0 // offset
+            }
+          }
+        });
+      });
+      const node = ev.item;
+      edges = node.getEdges();
+      edges.forEach(edge => this.graph.setItemState(edge, "running", false));
     });
   }
 };

@@ -1,5 +1,5 @@
 import CodeMirror from "codemirror";
-import vlgParser from "./vlgParser.js";
+import vlgParser from "../vlgParser.js";
 var lineColumn = require("line-column");
 
 CodeMirror.defineSimpleMode("vlg", {

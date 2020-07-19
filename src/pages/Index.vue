@@ -4,33 +4,101 @@
       <div class="col">
         <q-tabs inline-label v-model="tab">
           <q-tab name="code" label="Code"></q-tab>
-          <q-tab name="gates" label="Gates" :disable="!gates.length"></q-tab>
-          <q-tab name="trace" label="Trace" :disable="!gates.length"></q-tab>
+          <q-tab
+            name="gates"
+            label="Gates"
+            :disable="!compiled.gates.length"
+          ></q-tab>
+          <q-tab
+            name="trace"
+            label="Trace"
+            :disable="!compiled.simulation"
+          ></q-tab>
           <q-tab
             name="graph"
             label="Schematic"
-            :disable="!gates.length"
+            :disable="!compiled.gates.length"
           ></q-tab>
         </q-tabs>
-        <q-tab-panels v-model="tab">
-          <q-tab-panel name="code" key="code"
-            ><editor
-              @onCompile="processAST"
-              @onSimulate="runSimulation"
-            ></editor
-          ></q-tab-panel>
+
+        <q-tab-panels v-model="tab" keep-alive dense>
+          <q-tab-panel name="code" key="code" class="q-gutter-md">
+            <div class="row">
+              <q-card class="col">
+                <q-tabs
+                  v-model="sourceTab"
+                  no-caps
+                  dense
+                  inline-label
+                  align="left"
+                  class="bg-grey-4"
+                  active-color="primary"
+                  indicator-color="primary"
+                >
+                  <q-tab name="onebit" label="1BitAdder"></q-tab>
+                  <q-tab name="flipflop" label="FlipFlop"></q-tab>
+                  <q-tab name="scratch" label="Scratch"></q-tab>
+                </q-tabs>
+                <q-tab-panels v-model="sourceTab" keep-alive>
+                  <q-tab-panel name="onebit" key="onebit" class="q-pa-none"
+                    ><editor v-model="source.onebit"
+                  /></q-tab-panel>
+                  <q-tab-panel name="flipflop" key="flipflop" class="q-pa-none"
+                    ><editor v-model="source.flipflop"
+                  /></q-tab-panel>
+                  <q-tab-panel name="scratch" key="scratch" class="q-pa-none"
+                    ><editor v-model="source.scratch"
+                  /></q-tab-panel>
+                </q-tab-panels>
+              </q-card>
+            </div>
+            <!-- <div class="q-gutter-md"> -->
+            <!-- <q-card> -->
+            <div class="row">
+              <q-card class="col">
+                <!-- <q-separator></q-separator> -->
+                <q-card-section class="q-gutter-md">
+                  <q-btn
+                    @click="compile"
+                    color="primary"
+                    :icon-right="compileIcon"
+                    label="Compile"
+                  ></q-btn>
+                  <q-btn
+                    @click="simulate"
+                    color="secondary"
+                    icon-right="play_arrow"
+                    label="Simulate"
+                    :disable="compiled.state != 'success'"
+                  ></q-btn>
+                  <div
+                    v-if="showTerminal"
+                    class="q-pa-sm"
+                    style="background-color: black"
+                  >
+                    <div id="terminal" style="height:200px"></div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+
+            <!-- </div> -->
+          </q-tab-panel>
           <q-tab-panel name="trace" key="trace"
             ><trace
-              :simulation="simulation"
-              :gates="gates"
-              :instances="instances"
+              :simulation="compiled.simulation"
+              :gates="compiled.gates"
+              :instances="compiled.instances"
             ></trace
           ></q-tab-panel>
           <q-tab-panel name="gates" key="gates"
-            ><gates :gates="gates" :instances="instances"></gates
+            ><gates
+              :gates="compiled.gates"
+              :instances="compiled.instances"
+            ></gates
           ></q-tab-panel>
           <q-tab-panel name="graph" key="graph"
-            ><graph :gates="gates" :instances="instances"
+            ><graph :gates="compiled.gates" :instances="compiled.instances"
           /></q-tab-panel>
         </q-tab-panels>
       </div>
@@ -43,7 +111,24 @@ import Editor from "../components/editor/Editor";
 import Graph from "../components/graph";
 import Trace from "../components/trace";
 import Gates from "../components/gates";
+
+import vlgParser from "../components/vlgParser.js";
 import vlgWalker from "./vlgWalker.js";
+
+import "xterm/css/xterm.css";
+import { Terminal } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+
+// import { Chalk } from "chalk";
+const Chalk = require("chalk");
+
+let options = { enabled: true, level: 2 };
+const chalk = new Chalk.Instance(options);
+const shortJoin = strs => {
+  const x = strs.join(", ");
+  if (x.length < 21) return x;
+  else return x.slice(0, 40) + "...";
+};
 
 const indexBy = (array, prop) =>
   array.reduce((output, item) => {
@@ -111,6 +196,10 @@ const evaluate = (components, componentLookup) => {
   });
 };
 
+import onebit from "../statics/1bitadder.vlg";
+import flipflop from "../statics/1bitadder.vlg";
+import scratch from "../statics/scratch.vlg";
+
 export default {
   name: "PageIndex",
   components: {
@@ -121,35 +210,107 @@ export default {
   },
   data() {
     return {
+      terminal: {},
+      showTerminal: true,
+      fitAddon: {},
+      compiled: {
+        state: "uncompiled",
+        sourceFile: "",
+        parseTree: null,
+        gates: [],
+        instances: [],
+        simulation: {}
+      },
       tab: "code",
       layout: "dagre",
-      parseTree: null,
-      gates: [],
-      instances: [],
-      simulation: {}
+      source: { onebit, flipflop: "", scratch },
+      sourceTab: "onebit"
     };
   },
+  computed: {
+    compileIcon: function() {
+      if (this.compiled.state == "success") return "check_circle";
+      if (this.compiled.state == "error") return "error_outline";
+      return "replay";
+    }
+  },
   methods: {
-    processAST(parseTree) {
-      this.parseTree = parseTree;
-      const walk = vlgWalker(parseTree);
-      this.instances = [...walk.instances];
-      this.gates = [...walk.gates];
+    termWriteln(str) {
+      this.terminal.write(str + "\n\r");
+      this.terminal.scrollToBottom();
     },
-    runSimulation() {
+    compile() {
+      this.showTerminal = true;
+      this.compiled.sourceFile = this.sourceTab;
+      this.termWriteln(
+        chalk.bold.green("• Compiling: ") + chalk.yellow(this.sourceTab)
+      );
+      const parse = vlgParser(this.source[this.sourceTab]).parseState;
+      if (parse.isError) {
+        this.compiled.state = "error";
+        this.termWriteln(chalk.red("└── Parser error: ") + parse.error);
+        return;
+      }
+
+      this.compiled.state = "success";
+      this.compiled.parseTree = parse.result;
+      this.termWriteln(
+        chalk.green(
+          `├── Parsed ${this.compiled.parseTree.length} modules: ${chalk.white(
+            this.compiled.parseTree.map(x => x.id).join(", ")
+          )}`
+        )
+      );
+
+      const walk = vlgWalker(this.compiled.parseTree);
+      this.compiled.instances = [...walk.instances];
+      this.compiled.gates = [...walk.gates];
+
+      this.termWriteln(
+        chalk.green(
+          `├── Generated ${
+            this.compiled.instances.length
+          } instances: ${chalk.white(
+            shortJoin(this.compiled.instances.map(x => x.id))
+          )}`
+        )
+      );
+      this.termWriteln(
+        chalk.green(
+          `└── Generated ${this.compiled.gates.length} gates: ${chalk.white(
+            shortJoin(this.compiled.gates.map(x => x.id))
+          )}`
+        )
+      );
+
+      this.termWriteln(
+        chalk.green.inverse(" DONE ") + "  Compiled successfully"
+      );
+    },
+    simulate() {
+      this.showTerminal = true;
+      this.termWriteln(
+        chalk.bold.cyan("• Simulating: ") +
+          chalk.yellow(this.compiled.sourceFile)
+      );
+
       const EVALS_PER_STEP = 5;
-      this.gates.forEach(g => {
-        this.simulation[g] = [];
+      this.compiled.simulation = {};
+      this.compiled.gates.forEach(g => {
+        this.compiled.simulation[g.id] = [];
       });
 
-      var gatesLookup = indexBy(this.gates, "id");
-      var instancesLookup = indexBy(this.instances, "id");
-      var modulesLookup = indexBy(this.parseTree, "id");
+      var gatesLookup = indexBy(this.compiled.gates, "id");
+      var instancesLookup = indexBy(this.compiled.instances, "id");
+      var modulesLookup = indexBy(this.compiled.parseTree, "id");
 
       const maxClock = 17;
-      simulation.clock = [];
+      this.compiled.simulation.clock = [];
+      this.compiled.simulation.time = [];
+
       for (let clock = 0; clock < maxClock; clock++) {
-        simulation.clock.push(clock % 2);
+        this.compiled.simulation.clock.push(clock % 2);
+        this.compiled.simulation.time.push(clock);
         modulesLookup.main.clock.forEach(c => {
           if (c.time == clock) {
             c.assignments.forEach(a => {
@@ -160,13 +321,42 @@ export default {
           }
         });
         for (let i = 0; i < EVALS_PER_STEP; i++) {
-          evaluate(this.gates, gatesLookup);
+          evaluate(this.compiled.gates, gatesLookup);
         }
-        this.gates.forEach(g => {
-          this.simulation[g].push(gatesLookup[g].state);
+        this.compiled.gates.forEach(g => {
+          this.compiled.simulation[g.id].push(gatesLookup[g.id].state);
+        });
+
+        modulesLookup.main.clock.forEach((x, index, all) => {
+          if (x.time != clock) return;
+
+          const lineChar = index == all.length - 1 ? "└" : "├";
+
+          this.termWriteln(
+            chalk.cyan(
+              `${lineChar}── Time ${clock.toString().padStart(3, "0")} :`
+            ) +
+              shortJoin(x.assignments.map(a => a.id + "=" + a.value)) +
+              chalk.cyan(" => ") +
+              shortJoin(
+                instancesLookup.main.outputs.map(
+                  o => o.moduleportid + "=" + gatesLookup[o.globalid].state
+                )
+              )
+          );
         });
       }
+      this.termWriteln(
+        chalk.cyan.inverse(" DONE ") + "  Simulated successfully"
+      );
     }
+  },
+  mounted() {
+    this.terminal = new Terminal({ rows: 40 });
+    this.fitAddon = new FitAddon();
+    this.terminal.loadAddon(this.fitAddon);
+    this.terminal.open(document.getElementById("terminal"));
+    this.fitAddon.fit();
   }
 };
 </script>

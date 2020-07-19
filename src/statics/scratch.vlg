@@ -1,0 +1,38 @@
+module MyModule (
+	 input a,
+	 input b,
+	 output x,
+	 output y );
+
+	 wire w1, w2, w3;
+
+	 and( x, a, b );
+	 or( y, a, b );
+endmodule
+
+module main(
+  output o1,
+  output o2);
+
+  wire a, b, cin;
+
+  control(user1);
+  control(user2);
+
+  MyModule foo(
+		.a(user1),
+		.b(user2),
+		.x(o1),
+		.y(o2)
+  );
+
+  buffer(o1);
+  buffer(o2);
+
+  test begin
+	#0  {user1=0, user2=0};
+	#2  {user1=0, user2=1};
+	#4  {user1=1, user2=0};
+	#6  {user1=1, user2=1};
+  end
+endmodule
