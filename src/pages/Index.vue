@@ -62,6 +62,7 @@
                     color="primary"
                     :icon-right="compileIcon"
                     label="Compile"
+                    :disable="!readyToCompile"
                   ></q-btn>
                   <q-btn
                     @click="simulate"
@@ -156,7 +157,6 @@ const logicFunctions = {
 
 const evaluate = (components, componentLookup) => {
   const logicOperation = component => {
-    console.log("LogicOperation: ", component, componentLookup);
     let logicFn = component.logic;
     if (component.inputs.length == 1) {
       if (!(logicFn == "not" || logicFn == "buffer")) {
@@ -231,6 +231,10 @@ export default {
     };
   },
   computed: {
+    readyToCompile: function() {
+      // TODO: check editor parse state for errors
+      return true;
+    },
     compileIcon: function() {
       if (this.compiled.state == "success") return "check_circle";
       if (this.compiled.state == "error") return "error_outline";

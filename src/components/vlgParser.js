@@ -1,83 +1,101 @@
-import A from "./editor/parserLib.js";
+import {
+  str,
+  between,
+  optionalWhitespace,
+  whitespace,
+  sepBy,
+  sequenceOf,
+  regex,
+  possibly,
+  choice,
+  coroutine,
+  many,
+  many1,
+  everythingUntil,
+  char,
+  digit,
+  digits,
+  endOfInput,
+  recursiveParser,
+  skip
+} from "arcsecond";
+
+var lint = [];
+const lintError = lintError => (error, index) => {
+  lint.push({ index, error: lintError });
+  return lintError;
+};
 
 // Utility parsers
-// const peek = A.lookAhead(A.regex(/^./));
-const upperOrLowerStr = s =>
-  A.choice([A.str(s.toUpperCase()), A.str(s.toLowerCase())]).errorMap(
-    (error, index) => "choice 000"
-  );
-
-const ws = parser =>
-  A.between(A.optionalWhitespace, A.optionalWhitespace)(parser);
-const wsBounded = parser => A.between(A.whitespace, A.whitespace)(parser);
-const commaSeparated = A.sepBy(ws(A.char(",")));
-const semicolonSeparated = A.sepBy(ws(A.char(";")));
-const betweenRoundBrackets = A.between(ws(A.char("(")), ws(A.char(")")));
-const betweenCurlyBrackets = A.between(ws(A.char("{")), ws(A.char("}")));
-const betweenSquareBrackets = A.between(ws(A.char("[")), ws(A.char("]")));
-
-const tag = type => value => ({ type, value });
-const mapJoin = parser => parser.map(items => items.join(""));
+const comment = sequenceOf([
+  str("//"),
+  everythingUntil(char("\n")),
+  optionalWhitespace
+]);
+const optionalWhitespaceOrComment = possibly(choice([whitespace, comment])).map(
+  x => x || ""
+);
+const ws = myparser =>
+  between(optionalWhitespaceOrComment)(optionalWhitespaceOrComment)(myparser);
+const commaSeparated = sepBy(ws(char(",")));
+const semicolonSeparated = sepBy(ws(char(";")));
+const betweenRoundBrackets = between(ws(char("(")))(ws(char(")")));
+const betweenCurlyBrackets = between(ws(char("{")))(ws(char("}")));
+const betweenSquareBrackets = between(ws(char("[")))(ws(char("]")));
 
 // Token parsers
 const identifier = ws(
-  A.sequenceOf([
-    A.regex(/^[a-zA-Z_]/),
-    A.possibly(A.regex(/^[a-zA-Z0-9_]+/)).map(x => (x === null ? "" : x))
+  sequenceOf([
+    regex(/^[a-zA-Z_]/),
+    possibly(regex(/^[a-zA-Z0-9_]+/)).map(x => (x === null ? "" : x))
   ])
 ).map(x => x.join(""));
 
-const lazy = parserThunk =>
-  new A.Parser(parserState => {
-    const parser = parserThunk();
-    return parser.parserStateTransformerFn(parserState);
-  });
-
 const logicOperator = ws(
-  A.choice([A.str("and"), A.str("nand"), A.str("or"), A.str("nor")])
+  choice([str("and"), str("nand"), str("or"), str("nor")])
 );
 
-const primary = lazy(() =>
-  A.choice([identifier, betweenRoundBrackets(expression)])
+const primary = recursiveParser(() =>
+  choice([identifier, betweenRoundBrackets(expression)])
 );
 
-const factor = lazy(() =>
-  A.choice([A.sequenceOf([A.str("not"), ws(primary)]), primary])
+const factor = recursiveParser(() =>
+  choice([sequenceOf([str("not"), ws(primary)]), primary])
 );
 
-const expression = A.sequenceOf([
+const expression = sequenceOf([
   factor,
-  A.many(A.sequenceOf([logicOperator, factor]))
+  many(sequenceOf([logicOperator, factor]))
 ]);
 
-const gateParser = A.contextual(function*() {
-  const gate = yield A.choice([
-    A.str("and"),
-    A.str("nand"),
-    A.str("or"),
-    A.str("xor"),
-    A.str("nor"),
-    A.str("not"),
-    A.str("control"),
-    A.str("buffer")
+const gateParser = coroutine(function*() {
+  const gate = yield choice([
+    str("and"),
+    str("nand"),
+    str("or"),
+    str("xor"),
+    str("nor"),
+    str("not"),
+    str("control"),
+    str("buffer")
   ]);
 
   const params = yield betweenRoundBrackets(commaSeparated(identifier));
-  yield ws(A.str(";"));
+  yield ws(str(";"));
 
   return { type: "gate", id: params[0], gate, params: params.slice(1) };
 });
 
-const assignParser = A.contextual(function*() {
-  yield A.str("assign ");
+const assignParser = coroutine(function*() {
+  yield str("assign ");
   const id = yield ws(identifier);
-  yield A.str("=");
+  yield str("=");
   const value = yield ws(numberParser);
-  yield A.str(";");
+  yield str(";");
   return { type: "assign", id, value };
 });
 
-const instanceParser = A.contextual(function*() {
+const instanceParser = coroutine(function*() {
   const module = yield ws(identifier).errorMap(x => "no module");
   const id = yield ws(identifier).errorMap(x => "no id");
   const params = yield betweenRoundBrackets(
@@ -86,72 +104,78 @@ const instanceParser = A.contextual(function*() {
     console.log(x);
     return x;
   });
-  yield A.str(";");
+  yield str(";");
   return { type: "instance", module, id, params };
 });
 
-const variableParser = A.contextual(function*() {
+const variableParser = coroutine(function*() {
   const id = yield identifier;
-  const index = yield A.possibly(betweenSquareBrackets(A.digits));
+  const index = yield possibly(betweenSquareBrackets(digits));
   return { id, index };
 });
 
-const instanceParamsParser = A.contextual(function*() {
-  const instanceVar = yield A.sequenceOf([A.str("."), identifier]).map(
-    x => x[1]
-  );
+const instanceParamsParser = coroutine(function*() {
+  const instanceVar = yield sequenceOf([str("."), identifier]).map(x => x[1]);
   const moduleVar = yield betweenRoundBrackets(variableParser);
   return { param: instanceVar, mapped: moduleVar };
 });
 
-const numberParser = A.contextual(function*() {
-  const bits = yield A.digits;
-  yield A.str("'");
-  const base = yield A.str("b"); //A.choice([A.str("b"), A.str("h", A.str("d"))]);
-  const value = yield A.digits;
+const numberParser = coroutine(function*() {
+  const bits = yield digits;
+  yield str("'");
+  const base = yield str("b"); //choice([str("b"), str("h", str("d"))]);
+  const value = yield digits;
   return { type: "number", bits, base, value };
 });
 
-const arrayDimParser = A.contextual(function*() {
+const arrayDimParser = coroutine(function*() {
   const dim = yield betweenSquareBrackets(
-    A.sequenceOf([A.digits, A.str(":"), A.digits])
+    sequenceOf([digits, str(":"), digits])
   ).map(x => [x[0], x[2]]);
   return dim;
 });
 
-const portParser = A.contextual(function*() {
-  const type = yield A.choice([ws(A.str("input")), ws(A.str("output"))]);
-  const arrayDim = yield A.possibly(arrayDimParser);
-  const id = yield ws(identifier);
+const portParser = coroutine(function*() {
+  const type = yield choice([ws(str("input")), ws(str("output"))]).errorMap(
+    lintError("Invalid port type: must be 'input' or 'output'")
+  );
+  const arrayDim = yield possibly(arrayDimParser);
+  const id = yield ws(identifier).errorMap(
+    lintError("Invalid port identifier")
+  );
   return { type, dim: arrayDim, id };
 });
 
-const testAssignmentParser = A.contextual(function*() {
+const testAssignmentParser = coroutine(function*() {
   const id = yield ws(identifier);
-  yield A.str("=");
-  const value = yield ws(A.digits);
+  yield str("=");
+  const value = yield ws(digits);
   return { id, value: parseInt(value, 10) };
 });
 
-const testClockParser = A.contextual(function*() {
-  yield A.str("#");
-  const time = yield A.digits;
-  yield A.whitespace;
+const testClockParser = coroutine(function*() {
+  yield str("#");
+  const time = yield digits;
+  yield whitespace;
   const assignments = yield betweenCurlyBrackets(
     commaSeparated(ws(testAssignmentParser))
   );
-  yield A.str(";");
+  yield str(";");
   return { time: parseInt(time, 10), assignments };
 });
 
-const moduleParser = A.contextual(function*() {
-  yield A.str("module ");
+// MODULE ================================================
+
+const moduleParser = coroutine(function*() {
+  // TODO: Wrap each of these in an either. If error yield a everythingUntil("endmodule").map(x=>{}) so that parsing can continue to next module
+
+  yield str("module ").errorMap(lintError("Expecting 'module'"));
 
   const id = yield ws(identifier).errorMap(
-    (error, index) => `Invalid module identifier`
+    lintError("Invalid module identifier")
   );
 
-  const ports = yield A.possibly(
+  const ports = yield possibly(
     betweenRoundBrackets(
       commaSeparated(
         portParser.errorMap(
@@ -161,53 +185,43 @@ const moduleParser = A.contextual(function*() {
     )
   );
 
-  yield ws(A.str(";"));
+  yield ws(str(";"));
 
-  const wires = yield A.possibly(
-    A.sequenceOf([
-      A.str("wire "),
+  const wires = yield possibly(
+    sequenceOf([
+      str("wire "),
       commaSeparated(ws(identifier)),
-      ws(A.str(";"))
+      ws(str(";"))
     ]).map(x => x[1])
   );
 
-  const statements = yield A.many(
-    A.choice([ws(gateParser), ws(instanceParser), ws(assignParser)])
+  const statements = yield many(
+    choice([ws(gateParser), ws(instanceParser), ws(assignParser)])
   );
 
   var clock;
   if (id == "main") {
-    yield ws(A.str("test begin"));
-    clock = yield A.many(ws(testClockParser));
-    yield ws(A.str("end"));
+    yield ws(str("test begin"));
+    clock = yield many(ws(testClockParser));
+    yield ws(str("end"));
   }
 
-  yield ws(A.str("endmodule"));
+  yield ws(str("endmodule"));
 
   return { type: "module", id, ports, wires, statements, clock };
 });
 
-const throwLintError = (newerror, newindex) => {
-  if (newindex > globalLintObject.index) {
-    globalLintObject.index = newindex;
-    globalLintObject.error = newerror;
-  }
-  // console.log(newerror);
-  return newerror;
-};
-
-const globalLintObject = {};
+// ===================================
 
 const vlgParser = code => {
-  globalLintObject.index = -1;
-  globalLintObject.error = null;
+  lint = [];
+  const parseState = sequenceOf([many1(ws(moduleParser)), endOfInput])
+    .map(x => x[0]) // don't include the endofinput in result
+    .run(code);
+  // TODO: check for undefined variables in modules and add these to lint
   return {
-    parseState: A.many(
-      ws(moduleParser).errorMap((error, index) =>
-        throwLintError(`Invalid module definition: ${error}`, index)
-      )
-    ).run(code),
-    lint: globalLintObject
+    parseState,
+    lint
   };
 };
 

@@ -14,6 +14,7 @@
   "dependencies": {
     "@antv/g6": "^3.5.10",
     "@quasar/extras": "^1.8.2",
+    "arcsecond": "^2.0.4",
     "chalk": "^4.1.0",
     "chart.js": "^2.9.3",
     "line-column": "^1.0.2",

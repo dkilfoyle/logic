@@ -1,6 +1,12 @@
 import CodeMirror from "codemirror";
 import vlgParser from "../vlgParser.js";
+
 var lineColumn = require("line-column");
+
+String.prototype.regexIndexOf = function(regex, startpos) {
+  var indexOf = this.substring(startpos || 0).search(regex);
+  return indexOf >= 0 ? indexOf + (startpos || 0) : indexOf;
+};
 
 CodeMirror.defineSimpleMode("vlg", {
   start: [
@@ -69,16 +75,24 @@ CodeMirror.registerHelper("lint", "vlg", text => {
   if (text == "") return [];
   var found = [];
   const parse = vlgParser(text);
+  console.log(parse);
+
+  var finder = lineColumn(text, { origin: 0 });
+  const addError = (error, index) => {
+    var errorStart = finder.fromIndex(index);
+    var errorEnd = finder.fromIndex(text.regexIndexOf(/[\s\(\[,]/, index));
+    found.push({
+      message: error,
+      from: CodeMirror.Pos(errorStart.line, errorStart.col),
+      to: CodeMirror.Pos(errorEnd.line, errorEnd.col)
+    });
+  };
 
   if (parse.parseState.isError) {
-    var finder = lineColumn(text, { origin: 0 });
-    var errorPos1 = finder.fromIndex(parse.lint.index);
-    var errorPos2 = finder.fromIndex(parse.lint.index + 5);
-    found[0] = {
-      message: parse.lint.error,
-      from: CodeMirror.Pos(errorPos1.line, errorPos1.col),
-      to: CodeMirror.Pos(errorPos2.line, errorPos2.col)
-    };
+    parse.lint.forEach(x => addError(x.error, x.index));
+    if (parse.lint.length == 0)
+      addError(parse.parseState.error, parse.parseState.index);
   }
+
   return found;
 });
