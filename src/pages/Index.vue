@@ -40,13 +40,19 @@
                 </q-tabs>
                 <q-tab-panels v-model="sourceTab" keep-alive>
                   <q-tab-panel name="adder" key="adder" class="q-pa-none"
-                    ><editor v-model="source.adder"
+                    ><editor
+                      v-model="source.adder"
+                      @parsed="onParsed('adder', $event)"
                   /></q-tab-panel>
                   <q-tab-panel name="dff" key="dff" class="q-pa-none"
-                    ><editor v-model="source.dff"
+                    ><editor
+                      v-model="source.dff"
+                      @parsed="onParsed('dff', $event)"
                   /></q-tab-panel>
                   <q-tab-panel name="scratch" key="scratch" class="q-pa-none"
-                    ><editor v-model="source.scratch"
+                    ><editor
+                      v-model="source.scratch"
+                      @parsed="onParsed('scratch', $event)"
                   /></q-tab-panel>
                 </q-tab-panels>
               </q-card>
@@ -56,27 +62,37 @@
             <div class="row">
               <q-card class="col">
                 <!-- <q-separator></q-separator> -->
-                <q-card-section class="q-gutter-md">
-                  <q-btn
-                    @click="compile"
-                    color="primary"
-                    :icon-right="compileIcon"
-                    label="Compile"
-                    :disable="!readyToCompile"
-                  ></q-btn>
-                  <q-btn
-                    @click="simulate"
-                    color="secondary"
-                    icon-right="play_arrow"
-                    label="Simulate"
-                    :disable="compiled.state != 'success'"
-                  ></q-btn>
+                <q-card-section>
+                  <div class="row q-gutter-md q-pb-md">
+                    <q-btn
+                      @click="compile"
+                      color="primary"
+                      :icon-right="compileIcon"
+                      label="Compile"
+                      :disable="sourceErrors > 0"
+                    ></q-btn>
+                    <q-btn
+                      @click="simulate"
+                      color="secondary"
+                      icon-right="play_arrow"
+                      label="Simulate"
+                      :disable="compiled.state != 'success'"
+                    ></q-btn>
+                    <q-space></q-space>
+                    <q-chip
+                      ><q-avatar color="red" text-color="white">{{
+                        sourceErrors
+                      }}</q-avatar
+                      >Errors</q-chip
+                    >
+                  </div>
+                  {{ sourceTab }}
                   <div
+                    class="row q-pa-sm"
                     v-if="showTerminal"
-                    class="q-pa-sm"
                     style="background-color: black"
                   >
-                    <div id="terminal" style="height:20vh"></div>
+                    <div class="col" id="terminal" style="height:20vh"></div>
                   </div>
                 </q-card-section>
               </q-card>
@@ -203,6 +219,8 @@ import adder from "../statics/1bitadder.vlg";
 import dff from "../statics/dff.vlg";
 import scratch from "../statics/scratch.vlg";
 
+import Vue from "vue";
+
 export default {
   name: "PageIndex",
   components: {
@@ -219,7 +237,7 @@ export default {
       compiled: {
         state: "uncompiled",
         sourceFile: "",
-        parseTree: null,
+        parseTree: { lint: [] },
         gates: [],
         instances: [],
         simulation: {}
@@ -227,13 +245,13 @@ export default {
       tab: "code",
       layout: "dagre",
       source: { adder, dff, scratch },
-      sourceTab: "adder"
+      sourceTab: "adder",
+      errors: {}
     };
   },
   computed: {
-    readyToCompile: function() {
-      // TODO: check editor parse state for errors
-      return true;
+    sourceErrors: function() {
+      return this.errors[this.sourceTab];
     },
     compileIcon: function() {
       if (this.compiled.state == "success") return "check_circle";
@@ -242,6 +260,10 @@ export default {
     }
   },
   methods: {
+    onParsed(file, event) {
+      console.log(file, event);
+      Vue.set(this.errors, file, event);
+    },
     termWriteln(str) {
       this.terminal.write(str + "\n\r");
       this.terminal.scrollToBottom();

@@ -74,22 +74,26 @@ CodeMirror.registerHelper("fold", "vlg", function(cm, start) {
 CodeMirror.registerHelper("lint", "vlg", text => {
   if (text == "") return [];
   var found = [];
+
   const parse = vlgParser(text);
-  console.log(parse);
 
   var finder = lineColumn(text, { origin: 0 });
-  const addError = (error, index) => {
+
+  const addError = (error, index, severity) => {
     var errorStart = finder.fromIndex(index);
-    var errorEnd = finder.fromIndex(text.regexIndexOf(/[\s\(\[,]/, index));
+    var errorEnd = finder.fromIndex(
+      Math.max(text.regexIndexOf(/[\s\(\)\[\]\{\},=]/, index), index)
+    );
     found.push({
       message: error,
+      severity,
       from: CodeMirror.Pos(errorStart.line, errorStart.col),
       to: CodeMirror.Pos(errorEnd.line, errorEnd.col)
     });
   };
 
+  parse.lint.forEach(x => addError(x.error, x.index, x.severity));
   if (parse.parseState.isError) {
-    parse.lint.forEach(x => addError(x.error, x.index));
     if (parse.lint.length == 0)
       addError(parse.parseState.error, parse.parseState.index);
   }
