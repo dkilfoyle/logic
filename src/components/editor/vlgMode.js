@@ -12,9 +12,15 @@ CodeMirror.defineSimpleMode("vlg", {
   start: [
     { regex: /"(?:[^\\]|\\.)*?(?:"|$)/, token: "string" },
     {
-      regex: /(?:module|input|output|endmodule|begin|end)\b/,
+      regex: /(?:module|begin)/,
+      token: "def",
+      indent: true
+    },
+    {
+      regex: /(?:input|output|endmodule|end)\b/,
       token: "def"
     },
+
     {
       regex: /(?:not|and|or|xor|nand|control|buffer)\b/,
       token: "keyword"
@@ -23,10 +29,6 @@ CodeMirror.defineSimpleMode("vlg", {
       regex: /(?:wire|test)\b/,
       token: "variable-2"
     },
-    // {
-    //   regex: /(?:not|nand|call|controlled|and|or)\b/,
-    //   token: "def"
-    // },
     { regex: /true|false|null|undefined/, token: "atom" },
     {
       regex: /0x[a-f\d]+|[-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?/i,

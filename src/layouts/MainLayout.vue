@@ -2,35 +2,23 @@
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
       <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="leftDrawerOpen = !leftDrawerOpen"
-        />
+        <q-btn flat dense round icon="menu" aria-label="Menu" />
 
         <q-toolbar-title>
           Digital Logic Simulation
         </q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <div>
+          v0.1
+          <a
+            href="https://github.com/dkilfoyle/logic"
+            rel="noopener"
+            target="_blank"
+            ><q-btn flat icon="img:statics/icons/GitHub-Mark-32px.png"></q-btn
+          ></a>
+        </div>
       </q-toolbar>
     </q-header>
-
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-      content-class="bg-grey-1"
-    >
-      <q-list>
-        <q-item-label header class="text-grey-8">
-          Options
-        </q-item-label>
-      </q-list>
-    </q-drawer>
 
     <q-page-container>
       <router-view />
@@ -43,9 +31,7 @@ export default {
   name: "MainLayout",
 
   data() {
-    return {
-      leftDrawerOpen: false
-    };
+    return {};
   }
 };
 </script>

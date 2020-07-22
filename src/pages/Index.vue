@@ -21,38 +21,74 @@
           ></q-tab>
         </q-tabs>
 
-        <q-tab-panels v-model="tab" keep-alive dense>
+        <q-tab-panels
+          v-model="tab"
+          keep-alive
+          dense
+          animated
+          transition-prev="fade"
+          transition-next="fade"
+        >
           <q-tab-panel name="code" key="code" class="q-gutter-md">
             <div class="row">
               <q-card class="col">
-                <q-tabs
+                <q-toolbar class="bg-grey-4 filetabs">
+                  <q-tabs
+                    v-for="file in openFiles"
+                    :key="file"
+                    shrink
+                    stretch
+                    dense
+                    v-model="sourceTab"
+                    inline-label
+                    align="left"
+                    active-color="white"
+                    active-bg-color="grey-9"
+                    indicator-color="cyan"
+                  >
+                    <q-tab class="filetab" :name="file" :label="file" dense>
+                    </q-tab></q-tabs
+                  ><q-space></q-space>
+                  <div class="q-gutter-sm">
+                    <q-badge v-if="sourceErrors(sourceTab) > 0" color="red"
+                      >{{ sourceErrors(sourceTab) }}
+                      <q-icon name="warning" color="white" class="q-ml-xs"
+                    /></q-badge>
+                    <q-btn-dropdown dense label="Files">
+                      <q-list v-for="file in allFiles" :key="file">
+                        <q-item
+                          clickable
+                          v-close-popup
+                          @click="onOpenFile(file)"
+                        >
+                          <q-item-section
+                            ><q-item-label>{{
+                              file
+                            }}</q-item-label></q-item-section
+                          >
+                        </q-item>
+                      </q-list>
+                    </q-btn-dropdown>
+                    <q-btn
+                      @click="closeFile"
+                      size="xs"
+                      flat
+                      round
+                      icon="close"
+                      class="all-pointer-events z-top"
+                    />
+                  </div>
+                </q-toolbar>
+                <q-tab-panels
                   v-model="sourceTab"
-                  dense
-                  inline-label
-                  align="left"
-                  class="bg-grey-4"
-                  active-color="primary"
-                  indicator-color="primary"
+                  keep-alive
+                  v-for="file in openFiles"
+                  :key="file"
                 >
-                  <q-tab name="adder" label="Adder"></q-tab>
-                  <q-tab name="dff" label="DFF"></q-tab>
-                  <q-tab name="scratch" label="Scratch"></q-tab>
-                </q-tabs>
-                <q-tab-panels v-model="sourceTab" keep-alive>
-                  <q-tab-panel name="adder" key="adder" class="q-pa-none"
+                  <q-tab-panel :name="file" :key="file" class="q-pa-none"
                     ><editor
-                      v-model="source.adder"
-                      @parsed="onParsed('adder', $event)"
-                  /></q-tab-panel>
-                  <q-tab-panel name="dff" key="dff" class="q-pa-none"
-                    ><editor
-                      v-model="source.dff"
-                      @parsed="onParsed('dff', $event)"
-                  /></q-tab-panel>
-                  <q-tab-panel name="scratch" key="scratch" class="q-pa-none"
-                    ><editor
-                      v-model="source.scratch"
-                      @parsed="onParsed('scratch', $event)"
+                      v-model="source[file]"
+                      @parsed="onParsed(file, $event)"
                   /></q-tab-panel>
                 </q-tab-panels>
               </q-card>
@@ -69,7 +105,7 @@
                       color="primary"
                       :icon-right="compileIcon"
                       label="Compile"
-                      :disable="sourceErrors > 0"
+                      :disable="sourceErrors(sourceTab) > 0"
                     ></q-btn>
                     <q-btn
                       @click="simulate"
@@ -79,17 +115,10 @@
                       :disable="compiled.state != 'success'"
                     ></q-btn>
                     <q-space></q-space>
-                    <q-chip
-                      ><q-avatar color="red" text-color="white">{{
-                        sourceErrors
-                      }}</q-avatar
-                      >Errors</q-chip
-                    >
                   </div>
-                  {{ sourceTab }}
                   <div
                     class="row q-pa-sm"
-                    v-if="showTerminal"
+                    v-show="showTerminal"
                     style="background-color: black"
                   >
                     <div class="col" id="terminal" style="height:20vh"></div>
@@ -215,9 +244,9 @@ const evaluate = (components, componentLookup) => {
   });
 };
 
-import adder from "../statics/1bitadder.vlg";
-import dff from "../statics/dff.vlg";
-import scratch from "../statics/scratch.vlg";
+import adder from "../statics/files/1bitadder.vlg";
+import dff from "../statics/files/dff.vlg";
+import scratch from "../statics/files/scratch.vlg";
 
 import Vue from "vue";
 
@@ -246,13 +275,12 @@ export default {
       layout: "dagre",
       source: { adder, dff, scratch },
       sourceTab: "adder",
+      openFiles: ["adder", "dff", "scratch"],
+      allFiles: ["adder", "dff", "scratch"],
       errors: {}
     };
   },
   computed: {
-    sourceErrors: function() {
-      return this.errors[this.sourceTab];
-    },
     compileIcon: function() {
       if (this.compiled.state == "success") return "check_circle";
       if (this.compiled.state == "error") return "error_outline";
@@ -260,9 +288,20 @@ export default {
     }
   },
   methods: {
+    closeFile: function() {
+      var index = this.openFiles.findIndex(x => x == this.sourceTab);
+      this.openFiles.splice(index, 1);
+      this.sourceTab = this.openFiles[index % this.openFiles.length];
+    },
+    sourceErrors: function(file) {
+      return this.errors[file];
+    },
     onParsed(file, event) {
-      console.log(file, event);
       Vue.set(this.errors, file, event);
+    },
+    onOpenFile(file) {
+      if (!this.openFiles.some(x => x == file)) this.openFiles.push(file);
+      this.sourceTab = file;
     },
     termWriteln(str) {
       this.terminal.write(str + "\n\r");
@@ -336,11 +375,17 @@ export default {
       var instancesLookup = indexBy(this.compiled.instances, "id");
       var modulesLookup = indexBy(this.compiled.parseTree, "id");
 
-      const maxClock = 17;
+      console.log(modulesLookup.main.clock);
+
+      const maxClock = modulesLookup.main.clock.reduce(
+        (acc, val) => Math.max(val.time, acc),
+        0
+      );
+
       this.compiled.simulation.time = [];
       if (gatesLookup["main.clock"]) gatesLookup["main.clock"].state = 0;
 
-      for (let clock = 0; clock < maxClock; clock++) {
+      for (let clock = 0; clock <= maxClock; clock++) {
         this.compiled.simulation.time.push(clock);
         modulesLookup.main.clock.forEach(c => {
           if (c.time == clock) {
@@ -401,5 +446,14 @@ export default {
   max-width: 900px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.filetab.q-tab {
+  padding: 0 8px;
+}
+
+.filetabs {
+  padding-left: 0px;
+  min-height: 40px;
 }
 </style>

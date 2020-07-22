@@ -25,14 +25,10 @@ const createInstance = (parentNamespace, instance) => {
     };
   });
 
-  console.log(instance.id);
-  console.log(varMap);
-
   // create all the gates first because instance processes needs to refer back to gates
   instanceModule.statements
     .filter(x => x.type == "gate")
     .forEach(statement => {
-      console.log(statement);
       gates.push({
         id: parentNamespace + instance.id + "." + statement.id,
         logic: statement.gate,

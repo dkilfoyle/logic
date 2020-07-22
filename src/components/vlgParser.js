@@ -26,6 +26,11 @@ import {
   tapParser
 } from "arcsecond";
 
+// Global ======================================================================
+
+var definedVariables = []; // global variable but for current module only
+var definedControls = [];
+
 var lint = [];
 const lintError = (lintError, severity) => (error, index) => {
   lint.push({
@@ -90,73 +95,82 @@ const numberParser = coroutine(function*() {
   return { type: "number", bits, base, value };
 });
 
-const definedVariableParser = definedVars =>
-  coroutine(function*() {
-    const variable = yield identifier.errorMap(lintError("Invalid identifier"));
+const definedVariableParser = coroutine(function*() {
+  const variable = yield identifier.errorMap(lintError("Invalid identifier"));
 
-    if (!definedVars.some(x => x == variable)) {
-      yield tapParser(state =>
-        lintError("Undefined variable", "warning")(
-          "",
-          state.index - variable.length
-        )
-      );
-    }
-    return variable;
-  });
+  if (!definedVariables.some(x => x == variable)) {
+    yield tapParser(state =>
+      lintError("Undefined variable", "warning")(
+        "",
+        state.index - variable.length
+      )
+    );
+  }
+  return variable;
+});
+
+const definedControlParser = coroutine(function*() {
+  const variable = yield identifier.errorMap(lintError("Invalid identifier"));
+
+  if (!definedControls.some(x => x == variable)) {
+    yield tapParser(state =>
+      lintError("Must be control variable", "warning")(
+        "",
+        state.index - variable.length
+      )
+    );
+  }
+  return variable;
+});
 
 // Instance parsers =====================================================
 
-const variableParser = definedVars =>
-  coroutine(function*() {
-    const id = yield definedVariableParser(definedVars);
-    const index = yield possibly(betweenSquareBrackets(digits));
-    return { id, index };
-  });
+const variableParser = coroutine(function*() {
+  const id = yield definedVariableParser;
+  const index = yield possibly(betweenSquareBrackets(digits));
+  return { id, index };
+});
 
-const instanceParamsParser = definedVars =>
-  coroutine(function*() {
-    const instanceVar = yield sequenceOf([str("."), identifier]).map(x => x[1]);
-    const moduleVar = yield betweenRoundBrackets(variableParser(definedVars));
-    return { param: instanceVar, mapped: moduleVar };
-  });
+const instanceParamsParser = coroutine(function*() {
+  const instanceVar = yield sequenceOf([str("."), identifier]).map(x => x[1]);
+  const moduleVar = yield betweenRoundBrackets(variableParser);
+  return { param: instanceVar, mapped: moduleVar };
+});
 
-const instanceParser = definedVars =>
-  coroutine(function*() {
-    const module = yield ws(identifier).errorMap(x => "no module");
-    const id = yield ws(identifier).errorMap(x => "no id");
-    const params = yield betweenRoundBrackets(
-      commaSeparated(ws(instanceParamsParser(definedVars)))
-    );
-    yield str(";");
-    return { type: "instance", module, id, params };
-  });
+const instanceParser = coroutine(function*() {
+  const module = yield ws(identifier).errorMap(x => "no module");
+  const id = yield ws(identifier).errorMap(x => "no id");
+  const params = yield betweenRoundBrackets(
+    commaSeparated(ws(instanceParamsParser))
+  );
+  yield str(";");
+  return { type: "instance", module, id, params };
+});
 
 // Gate parser ===========================================================
 
-const gateParser = vars =>
-  coroutine(function*() {
-    const gate = yield choice([
-      str("and"),
-      str("nand"),
-      str("or"),
-      str("xor"),
-      str("nor"),
-      str("not"),
-      str("control"),
-      str("buffer")
-    ]);
+const gateParser = coroutine(function*() {
+  const gate = yield choice([
+    str("and"),
+    str("nand"),
+    str("or"),
+    str("xor"),
+    str("nor"),
+    str("not"),
+    str("control"),
+    str("buffer")
+  ]);
 
-    const params = yield betweenRoundBrackets(
-      commaSeparated(
-        definedVariableParser(vars).errorMap(lintError("Undefined variable"))
-      )
-    );
+  const params = yield betweenRoundBrackets(
+    commaSeparated(
+      definedVariableParser.errorMap(lintError("Undefined variable"))
+    )
+  );
 
-    yield ws(str(";"));
+  yield ws(str(";"));
 
-    return { type: "gate", id: params[0], gate, params: params.slice(1) };
-  });
+  return { type: "gate", id: params[0], gate, params: params.slice(1) };
+});
 
 const assignParser = coroutine(function*() {
   yield str("assign ");
@@ -220,16 +234,22 @@ const moduleParser = coroutine(function*() {
   var wires = yield possibly(ws(wireParser));
   wires = wires ? wires : [];
 
-  const definedVars = [...ports.map(x => x.id), ...wires];
+  // global
+  definedVariables = [...ports.map(x => x.id), ...wires];
+  definedControls = [];
 
   // TODO: check for undefined variables modules and add these to lint
   const statements = yield many(
     choice([
-      ws(gateParser(definedVars)),
-      ws(instanceParser(definedVars))
+      ws(gateParser),
+      ws(instanceParser)
       //ws(assignParser)
     ])
   );
+
+  statements.forEach(x => {
+    if (x.gate == "control") definedControls.push(x.id);
+  });
 
   var clock;
   if (id == "main")
@@ -243,9 +263,7 @@ const moduleParser = coroutine(function*() {
 // Test sections parsers ================================================
 
 const testAssignmentParser = coroutine(function*() {
-  const id = yield ws(identifier).errorMap(
-    lintError("Invalid assignment identifier")
-  );
+  const id = yield ws(definedControlParser);
   yield str("=");
   const value = yield sequenceOf([
     ws(binaryDigit),
@@ -259,10 +277,11 @@ const testAssignmentParser = coroutine(function*() {
 const testTimeParser = coroutine(function*() {
   yield str("#");
   const time = yield digits.errorMap(lintError("Invalid time"));
-  yield whitespace;
-  const assignments = yield betweenCurlyBrackets(
-    commaSeparated(ws(testAssignmentParser))
+  yield optionalWhitespace;
+  var assignments = yield possibly(
+    betweenCurlyBrackets(commaSeparated(ws(testAssignmentParser)))
   );
+  assignments = assignments || [];
   yield str(";");
   return { time: parseInt(time, 10), assignments };
 });

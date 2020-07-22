@@ -14,7 +14,7 @@ module main(
   output o1,
   output o2);
 
-  wire a, b, cin;
+  wire user1, user2, cin;
 
   control(user1);
   control(user2);
