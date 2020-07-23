@@ -70,6 +70,9 @@ quasar dev
 
 ## Acknowledgements
 
-1. Francis Stokes (Arcsecond.js, Circuit Simulator)
-2. [Quasar.dev](https://quasar.dev/)
-3. [G6 Graph](https://g6.antv.vision/en/)
+1. [LowLevelJavascript Digital Circuit Simulator](https://www.youtube.com/c/LowLevelJavaScript)
+2. [Arcsecond.js](https://github.com/francisrstokes/arcsecond)
+3. [Quasar.dev](https://quasar.dev/)
+4. [G6 Graph](https://g6.antv.vision/en/)
+5. [CodeMirror](https://codemirror.net/)
+6. [ChartJS](https://www.chartjs.org/)
