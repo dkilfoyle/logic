@@ -63,9 +63,10 @@ quasar dev
 
 ## TODO
 
-1. Support bitwise statements to generate the logic gates (eg Q = (A & B) | ~C
-2. Support truth tables to generate optimised logic gates
-3. Support bit vectors
+1. More sample code circuits
+2. Support bitwise statements to generate the logic gates (eg Q = (A & B) | ~C
+3. Support truth tables to generate optimised logic gates
+4. Support bit vectors
 
 ## Acknowledgements
 
