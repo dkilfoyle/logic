@@ -170,9 +170,7 @@ const gateParser = coroutine(function*() {
   ]);
 
   const params = yield betweenRoundBrackets(
-    commaSeparated(
-      definedVariableParser.errorMap(lintError("Undefined variable"))
-    )
+    commaSeparated(definedVariableParser)
   );
 
   yield ws(str(";"));
@@ -180,11 +178,46 @@ const gateParser = coroutine(function*() {
   return { type: "gate", id: params[0], gate, params: params.slice(1) };
 });
 
+// Assign parser ======================================================
+
+const bitwiseParser = choice([
+  str("&").map(x => "and"),
+  str("|").map(x => "or"),
+  str("^").map(x => "xor"),
+  str("~&").map(x => "nand"),
+  str("~|").map(x => "nor")
+]).errorMap(lintError("Invalid bitwise operator"));
+
+const assignAtomParser = sequenceOf([possibly(str("~")), definedVariableParser])
+  .map(x => ({
+    type: "assignAtom",
+    id: x[1],
+    inverse: x[0] ? true : false
+  }))
+  .errorMap(lintError("Invalid bitwise atom"));
+
+const assignExpressionParser = recursiveParser(() =>
+  choice([assignAtomParser, assignOperationParser])
+);
+
+const assignOperationParser = betweenRoundBrackets(
+  sequenceOf([
+    assignExpressionParser,
+    ws(bitwiseParser),
+    assignExpressionParser
+  ])
+).map(x => ({
+  type: "assignOperation",
+  operand1: x[0],
+  operand2: x[2],
+  operator: x[1]
+}));
+
 const assignParser = coroutine(function*() {
   yield str("assign ");
   const id = yield ws(identifier);
   yield str("=");
-  const value = yield ws(numberParser);
+  const value = yield ws(assignOperationParser);
   yield str(";");
   return { type: "assign", id, value };
 });
@@ -249,9 +282,10 @@ const moduleParser = coroutine(function*() {
   // TODO: check for undefined variables modules and add these to lint
   const statements = yield many(
     choice([
+      // todo more wiresparser here so that wires don't have to be only at top
       ws(gateParser),
-      ws(instanceParser)
-      //ws(assignParser)
+      ws(instanceParser),
+      ws(assignParser)
     ])
   );
 
@@ -265,7 +299,9 @@ const moduleParser = coroutine(function*() {
 
   yield ws(str("endmodule"));
 
-  return { type: "module", id, ports, wires, statements, clock };
+  var module = { type: "module", id, ports, wires, statements };
+  if (clock) module.clock = clock;
+  return module;
 });
 
 // Test sections parsers ================================================

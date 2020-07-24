@@ -277,11 +277,13 @@ export default {
       source: { adder, dff, scratch, onehotdecoder },
       sourceTab: "adder",
       openFiles: ["adder", "dff", "onehotdecoder"],
-      allFiles: ["adder", "dff", "onehotdecoder"],
       errors: {}
     };
   },
   computed: {
+    allFiles: function() {
+      return Object.keys(this.source);
+    },
     compileIcon: function() {
       if (this.compiled.state == "success") return "check_circle";
       if (this.compiled.state == "error") return "error_outline";
@@ -376,8 +378,6 @@ export default {
       var instancesLookup = indexBy(this.compiled.instances, "id");
       var modulesLookup = indexBy(this.compiled.parseTree, "id");
 
-      console.log(modulesLookup.main.clock);
-
       const maxClock = modulesLookup.main.clock.reduce(
         (acc, val) => Math.max(val.time, acc),
         0
@@ -421,7 +421,7 @@ export default {
               chalk.cyan(" => ") +
               shortJoin(
                 instancesLookup.main.outputs.map(
-                  o => o.moduleportid + "=" + gatesLookup[o.globalid].state
+                  o => o.moduleid + "=" + gatesLookup[o.globalid].state
                 )
               )
           );

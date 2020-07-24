@@ -7,6 +7,7 @@ A B | F3 F2 F1 F0
 1 1 |  1  0  0  0
 */
 
+// using standard gate statements
 module OneHotDecoder (
   input a,
   input b,
@@ -16,7 +17,6 @@ module OneHotDecoder (
   output F0);
 
   wire nota, notb;
-
   not(nota, a);
   not(notb, b);
 
@@ -24,6 +24,21 @@ module OneHotDecoder (
   and(F1, nota, b);
   and(F2, a, notb);
   and(F3, a, b);
+endmodule
+
+// using bitwise assigns
+module OneHotDecoderBitwise (
+  input a,
+  input b,
+  output F3,
+  output F2,
+  output F1,
+  output F0);
+
+  assign F0 = (~a & ~b);
+  assign F1 = (~a & b);
+  assign F2 = (a & ~b);
+  assign F3 = (a & b);
 endmodule
 
 module main(
@@ -37,7 +52,8 @@ module main(
   control(a);
   control(b);
 
-  OneHotDecoder ohd(
+  // OneHotDecoder ohd(
+  OneHotDecoderBitwise ohd(
 		.a(a),
 		.b(b),
 		.F3(F3),

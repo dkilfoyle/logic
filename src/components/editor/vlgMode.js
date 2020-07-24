@@ -26,7 +26,7 @@ CodeMirror.defineSimpleMode("vlg", {
       token: "keyword"
     },
     {
-      regex: /(?:wire|test)\b/,
+      regex: /(?:wire|test|assign)\b/,
       token: "variable-2"
     },
     { regex: /true|false|null|undefined/, token: "atom" },

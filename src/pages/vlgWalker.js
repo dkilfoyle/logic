@@ -10,33 +10,78 @@ const createInstance = (parentNamespace, instance) => {
     acc[param.param] = {
       globalid: parentNamespace + param.mapped.id,
       type: "port",
-      moduleportid: param.param,
+      moduleid: param.param,
       instanceid: parentNamespace + instance.id + "." + param.param,
       porttype: instanceModule.ports.find(x => x.id == param.param).type
     };
     return acc;
   }, {});
 
-  instanceModule.wires.forEach(wire => {
-    varMap[wire] = {
-      globalid: parentNamespace + instance.id + "." + wire,
-      instanceid: parentNamespace + instance.id + "." + wire,
+  const addWire = wireLocalID => {
+    varMap[wireLocalID] = {
+      globalid: parentNamespace + instance.id + "." + wireLocalID,
+      instanceid: parentNamespace + instance.id + "." + wireLocalID,
+      moduleid: wireLocalID,
       type: "wire"
     };
-  });
+    return varMap[wireLocalID].globalid;
+  };
+
+  instanceModule.wires.forEach(addWire);
 
   // create all the gates first because instance processes needs to refer back to gates
-  instanceModule.statements
-    .filter(x => x.type == "gate")
-    .forEach(statement => {
-      gates.push({
-        id: parentNamespace + instance.id + "." + statement.id,
-        logic: statement.gate,
-        inputs: statement.params.map(param => varMap[param].globalid),
+  const addGate = gate => {
+    gates.push({
+      id: varMap[gate.id].instanceid,
+      logic: gate.gate,
+      inputs: gate.params.map(param => varMap[param].globalid),
+      instance: parentNamespace + instance.id,
+      state: 0
+    });
+    return varMap[gate.id].instanceid;
+  };
+
+  instanceModule.statements.filter(x => x.type == "gate").forEach(addGate);
+
+  const evaluateAssign = (node, parent) => {
+    if (node.type === "assignAtom") {
+      if (node.inverse) {
+        if (!varMap["not" + node.id]) {
+          // add a notA wire (if it doesn't already exist)
+          // add a gate: not(notA, A)
+          const notA = addWire("not" + node.id);
+          addGate({
+            id: "not" + node.id,
+            gate: "not",
+            params: [node.id],
+            instance: parentNamespace + instance.id,
+            state: 0
+          });
+        }
+        return "not" + node.id;
+      }
+      return node.id;
+    }
+
+    if (node.type === "assignOperation") {
+      // add an intermediary wire if necessary
+      if (!varMap[parent]) addwire(parent);
+      addGate({
+        id: parent,
+        gate: node.operator,
+        params: [
+          evaluateAssign(node.operand1, parent + "op1"),
+          evaluateAssign(node.operand2, parent + "op2")
+        ],
         instance: parentNamespace + instance.id,
         state: 0
       });
-    });
+    }
+  };
+
+  instanceModule.statements
+    .filter(x => x.type == "assign")
+    .forEach(statement => evaluateAssign(statement.value, statement.id));
 
   var newInstance = {
     id: parentNamespace + instance.id,
