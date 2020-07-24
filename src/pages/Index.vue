@@ -247,6 +247,7 @@ const evaluate = (components, componentLookup) => {
 import adder from "../statics/files/1bitadder.vlg";
 import dff from "../statics/files/dff.vlg";
 import scratch from "../statics/files/scratch.vlg";
+import onehotdecoder from "../statics/files/onehotdecoder.vlg";
 
 import Vue from "vue";
 
@@ -273,10 +274,10 @@ export default {
       },
       tab: "code",
       layout: "dagre",
-      source: { adder, dff, scratch },
+      source: { adder, dff, scratch, onehotdecoder },
       sourceTab: "adder",
-      openFiles: ["adder", "dff", "scratch"],
-      allFiles: ["adder", "dff", "scratch"],
+      openFiles: ["adder", "dff", "onehotdecoder"],
+      allFiles: ["adder", "dff", "onehotdecoder"],
       errors: {}
     };
   },

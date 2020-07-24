@@ -1,3 +1,5 @@
+// One bit full adder
+
 module SingleStage (
   input a,
   input b,
