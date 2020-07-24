@@ -72,5 +72,6 @@ module main(
     #2  {a=0, b=1};
     #4  {a=1, b=0};
     #6  {a=1, b=1};
+    #8;
 	end
 endmodule
