@@ -43,14 +43,22 @@ const lintError = (lintError, severity) => (error, index) => {
 
 // Utility parsers ===================================================================
 
-const comment = sequenceOf([
+const singleLineComment = sequenceOf([
   str("//"),
   everythingUntil(char("\n")),
   optionalWhitespace
 ]);
-const optionalWhitespaceOrComment = possibly(choice([whitespace, comment])).map(
-  x => x || ""
-);
+
+const multipleLineComment = sequenceOf([
+  str("/*"),
+  everythingUntil(str("*/")),
+  str("*/")
+]);
+
+const optionalWhitespaceOrComment = many(
+  choice([whitespace, singleLineComment, multipleLineComment])
+).map(x => x || "");
+
 const ws = myparser =>
   between(optionalWhitespaceOrComment)(optionalWhitespaceOrComment)(myparser);
 const commaSeparated = sepBy(ws(char(",")));
