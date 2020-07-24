@@ -1,3 +1,5 @@
+// D Flip Flop
+
 module DFF (
 	input clk,
 	input dIn,
@@ -44,5 +46,6 @@ module main(output q);
     #1  { A=1, E=0 };
     #7  { E=1 };
     #9  { A=0, E=0 };
+    #12;
   end
 endmodule

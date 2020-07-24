@@ -1,0 +1,76 @@
+/* 
+2 to 4 one hot decoder
+A B | F3 F2 F1 F0
+0 0 |  0  0  0  1 
+0 1 |  0  0  1  0
+1 0 |  0  1  0  0
+1 1 |  1  0  0  0
+*/
+
+// using standard gate statements
+module OneHotDecoder (
+  input a,
+  input b,
+  output F3,
+  output F2,
+  output F1,
+  output F0);
+
+  wire nota, notb;
+  not(nota, a);
+  not(notb, b);
+
+  and(F0, nota, notb);
+  and(F1, nota, b);
+  and(F2, a, notb);
+  and(F3, a, b);
+endmodule
+
+// using bitwise assigns
+module OneHotDecoderBitwise (
+  input a,
+  input b,
+  output F3,
+  output F2,
+  output F1,
+  output F0);
+
+  assign F0 = (~a & ~b);
+  assign F1 = (~a & b);
+  assign F2 = (a & ~b);
+  assign F3 = (a & b);
+endmodule
+
+module main(
+  output F3,
+  output F2,
+  output F1,
+  output F0);
+
+  wire a, b;
+
+  control(a);
+  control(b);
+
+  // OneHotDecoder ohd(
+  OneHotDecoderBitwise ohd(
+		.a(a),
+		.b(b),
+		.F3(F3),
+		.F2(F2),
+		.F1(F1),
+		.F0(F0)
+  );
+
+  buffer(F3);
+  buffer(F2);
+  buffer(F1);
+  buffer(F0);
+
+  test begin
+		#0  {a=0, b=0};
+    #2  {a=0, b=1};
+    #4  {a=1, b=0};
+    #6  {a=1, b=1};
+	end
+endmodule
