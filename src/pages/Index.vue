@@ -248,6 +248,7 @@ import adder from "../statics/files/1bitadder.vlg";
 import dff from "../statics/files/dff.vlg";
 import scratch from "../statics/files/scratch.vlg";
 import onehotdecoder from "../statics/files/onehotdecoder.vlg";
+import sevenseg from "../statics/files/7seg.vlg";
 
 import Vue from "vue";
 
@@ -274,9 +275,9 @@ export default {
       },
       tab: "code",
       layout: "dagre",
-      source: { adder, dff, scratch, onehotdecoder },
-      sourceTab: "adder",
-      openFiles: ["adder", "dff", "onehotdecoder"],
+      source: { adder, dff, scratch, onehotdecoder, sevenseg },
+      sourceTab: "sevenseg",
+      openFiles: ["onehotdecoder", "sevenseg"],
       errors: {}
     };
   },

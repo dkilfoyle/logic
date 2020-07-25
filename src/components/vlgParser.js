@@ -21,6 +21,8 @@ import {
   lookAhead,
   anythingExcept,
   either,
+  takeLeft,
+  takeRight,
   succeedWith,
   fail,
   tapParser
@@ -71,6 +73,15 @@ const anyOfArray = strs => choice(strs.map(x => str(x)));
 
 // Token parsers ===============================================================
 
+const UNARY_OPERATOR = choice([str("~")]);
+const BINARY_OPERATOR = choice([
+  str("&").map(x => "and"),
+  str("|").map(x => "or"),
+  str("^").map(x => "xor"),
+  str("~&").map(x => "nand"),
+  str("~|").map(x => "nor")
+]);
+
 const identifier = ws(
   sequenceOf([
     regex(/^[a-zA-Z_]/),
@@ -78,24 +89,7 @@ const identifier = ws(
   ])
 ).map(x => x.join(""));
 
-const logicOperator = ws(
-  choice([str("and"), str("nand"), str("or"), str("nor")])
-);
-
-const primary = recursiveParser(() =>
-  choice([identifier, betweenRoundBrackets(expression)])
-);
-
-const factor = recursiveParser(() =>
-  choice([sequenceOf([str("not"), ws(primary)]), primary])
-);
-
-const expression = sequenceOf([
-  factor,
-  many(sequenceOf([logicOperator, factor]))
-]);
-
-const numberParser = coroutine(function*() {
+const number = coroutine(function*() {
   const bits = yield digits;
   yield str("'");
   const base = yield str("b"); //choice([str("b"), str("h", str("d"))]);
@@ -104,7 +98,7 @@ const numberParser = coroutine(function*() {
 });
 
 const definedVariableParser = coroutine(function*() {
-  const variable = yield identifier.errorMap(lintError("Invalid identifier"));
+  const variable = yield identifier; //.errorMap(lintError("Invalid identifier"));
 
   if (!definedVariables.some(x => x == variable)) {
     yield tapParser(state =>
@@ -116,6 +110,34 @@ const definedVariableParser = coroutine(function*() {
   }
   return variable;
 });
+
+const debug = msg => x => {
+  console.log(msg + ":", x);
+  return x;
+};
+
+const primary = recursiveParser(() =>
+  sequenceOf([
+    possibly(UNARY_OPERATOR),
+    choice([
+      ws(definedVariableParser).map(x => ({ type: "variable", id: x })),
+      betweenRoundBrackets(expression)
+    ])
+  ]).map(x => {
+    x[1].inverse = x[0] ? true : false;
+    return x[1];
+  })
+);
+
+const expression = choice([
+  sequenceOf([primary, ws(BINARY_OPERATOR), primary]).map(x => ({
+    type: "binaryExpression",
+    operand1: x[0],
+    operator: x[1],
+    operand2: x[2]
+  })),
+  primary
+]).errorMap(lintError("Invalid expression"));
 
 const definedControlParser = coroutine(function*() {
   const variable = yield identifier.errorMap(lintError("Invalid identifier"));
@@ -180,44 +202,11 @@ const gateParser = coroutine(function*() {
 
 // Assign parser ======================================================
 
-const bitwiseParser = choice([
-  str("&").map(x => "and"),
-  str("|").map(x => "or"),
-  str("^").map(x => "xor"),
-  str("~&").map(x => "nand"),
-  str("~|").map(x => "nor")
-]).errorMap(lintError("Invalid bitwise operator"));
-
-const assignAtomParser = sequenceOf([possibly(str("~")), definedVariableParser])
-  .map(x => ({
-    type: "assignAtom",
-    id: x[1],
-    inverse: x[0] ? true : false
-  }))
-  .errorMap(lintError("Invalid bitwise atom"));
-
-const assignExpressionParser = recursiveParser(() =>
-  choice([assignAtomParser, assignOperationParser])
-);
-
-const assignOperationParser = betweenRoundBrackets(
-  sequenceOf([
-    assignExpressionParser,
-    ws(bitwiseParser),
-    assignExpressionParser
-  ])
-).map(x => ({
-  type: "assignOperation",
-  operand1: x[0],
-  operand2: x[2],
-  operator: x[1]
-}));
-
 const assignParser = coroutine(function*() {
   yield str("assign ");
   const id = yield ws(identifier);
   yield str("=");
-  const value = yield ws(assignOperationParser);
+  const value = yield expression;
   yield str(";");
   return { type: "assign", id, value };
 });
@@ -285,7 +274,7 @@ const moduleParser = coroutine(function*() {
       // todo more wiresparser here so that wires don't have to be only at top
       ws(gateParser),
       ws(instanceParser),
-      ws(assignParser)
+      ws(assignParser) //.map(debug("assign"))
     ])
   );
 

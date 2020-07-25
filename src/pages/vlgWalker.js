@@ -44,29 +44,43 @@ const createInstance = (parentNamespace, instance) => {
   instanceModule.statements.filter(x => x.type == "gate").forEach(addGate);
 
   const evaluateAssign = (node, parent) => {
-    if (node.type === "assignAtom") {
-      if (node.inverse) {
-        if (!varMap["not" + node.id]) {
-          // add a notA wire (if it doesn't already exist)
-          // add a gate: not(notA, A)
-          const notA = addWire("not" + node.id);
-          addGate({
-            id: "not" + node.id,
-            gate: "not",
-            params: [node.id],
-            instance: parentNamespace + instance.id,
-            state: 0
-          });
-        }
-        return "not" + node.id;
+    // if (node.type == "variable") {
+    //   console.log("evaluateAssign: ", node.type, node.id, node.inverse, parent);
+    // } else
+    //   console.log(
+    //     "evaluateAssign: ",
+    //     node.type,
+    //     node.inverse,
+    //     node.operator,
+    //     node.operand1,
+    //     node.operand2,
+    //     parent
+    //   );
+    if (node.inverse) {
+      // prepare an inverter gate to pipe the node output
+      if (!varMap["not" + node.id]) {
+        // add a notA wire (if it doesn't already exist)
+        // add a gate: not(notA, A)
+        const notA = addWire("not" + node.id);
+        addGate({
+          id: "not" + node.id,
+          gate: "not",
+          params: [node.id],
+          instance: parentNamespace + instance.id,
+          state: 0
+        });
       }
-      return node.id;
+      // return "not" + node.id;
     }
 
-    if (node.type === "assignOperation") {
+    if (node.type === "variable") {
+      return node.inverse ? "not" + node.id : node.id;
+    }
+
+    if (node.type === "binaryExpression") {
       // add an intermediary wire if necessary
-      if (!varMap[parent]) addwire(parent);
-      addGate({
+      if (!varMap[parent]) addWire(parent);
+      var newgate = {
         id: parent,
         gate: node.operator,
         params: [
@@ -75,13 +89,19 @@ const createInstance = (parentNamespace, instance) => {
         ],
         instance: parentNamespace + instance.id,
         state: 0
-      });
+      };
+      // console.log("Adding gate: ", newgate);
+      addGate(newgate);
+      return parent;
     }
   };
 
   instanceModule.statements
     .filter(x => x.type == "assign")
-    .forEach(statement => evaluateAssign(statement.value, statement.id));
+    .forEach(statement => {
+      // console.log("Assign: ", statement.id);
+      return evaluateAssign(statement.value, statement.id);
+    });
 
   var newInstance = {
     id: parentNamespace + instance.id,
