@@ -1,6 +1,6 @@
 export default {
   data: function() {
-    return { instanceID: "main", showWhichGates: "outputs" };
+    return { instanceID: "main", showWhichGates: "all" };
   },
   computed: {
     selectedInstance: function() {

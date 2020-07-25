@@ -1,6 +1,6 @@
 /* 
 2 to 4 one hot decoder
-A B | F3 F2 F1 F0
+a b | F3 F2 F1 F0
 0 0 |  0  0  0  1 
 0 1 |  0  0  1  0
 1 0 |  0  1  0  0

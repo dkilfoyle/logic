@@ -2,7 +2,7 @@
   <div class="q-pa-sm q-gutter-sm">
     <div class="row">
       <div class="col-3">
-        <div class="text-subtitle2">Instances</div>
+        <div class="text-subtitle2">{{ file }}</div>
         <q-tree
           :nodes="instanceTree"
           node-key="id"
@@ -43,7 +43,7 @@ import TraceChart from "./traceChart.js";
 import SelectionMixin from "./selections";
 
 export default {
-  props: ["simulation", "gates", "instances"],
+  props: ["simulation", "gates", "instances", "file"],
   mixins: [SelectionMixin],
   components: { TraceChart },
   data() {

@@ -42,6 +42,7 @@
                     v-model="sourceTab"
                     inline-label
                     align="left"
+                    no-caps
                     active-color="white"
                     active-bg-color="grey-9"
                     indicator-color="cyan"
@@ -131,6 +132,7 @@
           </q-tab-panel>
           <q-tab-panel name="trace" key="trace"
             ><trace
+              :file="compiled.sourceFile"
               :simulation="compiled.simulation"
               :gates="compiled.gates"
               :instances="compiled.instances"
@@ -138,12 +140,16 @@
           ></q-tab-panel>
           <q-tab-panel name="gates" key="gates"
             ><gates
+              :file="compiled.sourceFile"
               :gates="compiled.gates"
               :instances="compiled.instances"
             ></gates
           ></q-tab-panel>
           <q-tab-panel name="graph" key="graph"
-            ><graph :gates="compiled.gates" :instances="compiled.instances"
+            ><graph
+              :file="compiled.sourceFile"
+              :gates="compiled.gates"
+              :instances="compiled.instances"
           /></q-tab-panel>
         </q-tab-panels>
       </div>
@@ -244,11 +250,12 @@ const evaluate = (components, componentLookup) => {
   });
 };
 
-import adder from "../statics/files/1bitadder.vlg";
-import dff from "../statics/files/dff.vlg";
-import scratch from "../statics/files/scratch.vlg";
-import onehotdecoder from "../statics/files/onehotdecoder.vlg";
-import sevenseg from "../statics/files/7seg.vlg";
+import BitAdder from "../statics/files/1bitadder.vlg";
+import DFF from "../statics/files/dff.vlg";
+import Scratch from "../statics/files/scratch.vlg";
+import OneHotDecoder from "../statics/files/onehotdecoder.vlg";
+import SevenSeg from "../statics/files/7seg.vlg";
+import Mux2_1 from "../statics/files/mux.vlg";
 
 import Vue from "vue";
 
@@ -275,9 +282,9 @@ export default {
       },
       tab: "code",
       layout: "dagre",
-      source: { adder, dff, scratch, onehotdecoder, sevenseg },
-      sourceTab: "onehotdecoder",
-      openFiles: ["onehotdecoder", "sevenseg"],
+      source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1 },
+      sourceTab: "OneHotDecoder",
+      openFiles: ["OneHotDecoder", "Mux2_1", "Scratch"],
       errors: {}
     };
   },
@@ -452,6 +459,10 @@ export default {
 
 .filetab.q-tab {
   padding: 0 8px;
+}
+
+.filetab.q-tab--inactive {
+  border-right: 2px solid #c5c5c5;
 }
 
 .filetabs {

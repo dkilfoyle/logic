@@ -2,7 +2,7 @@
   <div class="q-pa-md q-gutter-md">
     <div class="row">
       <div class="col-3">
-        <div class="text-subtitle2">Instances</div>
+        <div class="text-subtitle2">{{ file }}</div>
         <q-tree
           :nodes="instanceTree"
           node-key="id"
@@ -50,7 +50,7 @@ import { debounce } from "quasar";
 import SelectionMixin from "./selections";
 
 export default {
-  props: ["gates", "instances"],
+  props: ["gates", "instances", "file"],
   mixins: [SelectionMixin],
   data() {
     return {
