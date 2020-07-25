@@ -1,11 +1,11 @@
 {
   "name": "logic",
   "version": "0.0.1",
-  "description": "A Quasar Framework app",
-  "productName": "Quasar App",
+  "description": "Logic Circuit Simulator",
+  "productName": "Logic Sim",
   "cordovaId": "org.cordova.quasar.app",
   "capacitorId": "",
-  "author": "deank <dean1222@xtra.co.nz>",
+  "author": "",
   "private": true,
   "scripts": {
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore ./",
