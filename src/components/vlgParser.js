@@ -108,8 +108,11 @@ const identifier = coroutine(function*() {
       ])
     ).map(x => x.join(""))
   );
-  if (id.isError) yield fail();
-  if (keywords.some(x => x == id.value)) yield fail();
+  if (id.isError) {
+    yield fail("Invalid ID");
+  }
+  if (keywords.some(x => x == id.value))
+    yield fail("Identifier cannot be keyword");
   return id.value;
 });
 
@@ -247,14 +250,16 @@ const arrayDimParser = coroutine(function*() {
 const listOfIds = sequenceOf([
   ws(identifier),
   many(takeRight(str(","))(ws(identifier)))
-]).map(x => x.flat());
+])
+  .map(x => x.flat())
+  .errorMap(lintError("Invalid port identifier"));
 
 const portParser = coroutine(function*() {
   const type = yield choice([ws(str("input")), ws(str("output"))]).errorMap(
     lintError("Invalid port type: must be 'input' or 'output'")
   );
   const arrayDim = yield possibly(arrayDimParser);
-  const ids = yield listOfIds.errorMap(lintError("Invalid port identifier"));
+  const ids = yield listOfIds.errorMap(debug("Invalid port identifier33333"));
   return ids.map(x => ({ type, dim: arrayDim, id: x }));
   // return { type, dim: arrayDim, id: ids[0] };
 });
@@ -280,8 +285,8 @@ const moduleParser = coroutine(function*() {
   const ports = yield possibly(
     betweenRoundBrackets(
       commaSeparated(portParser.errorMap(lintError("Invalid ports section")))
-    )
-  ).map(x => x.flat());
+    ).map(x => x.flat())
+  );
 
   yield ws(str(";"));
 
