@@ -276,7 +276,7 @@ export default {
       tab: "code",
       layout: "dagre",
       source: { adder, dff, scratch, onehotdecoder, sevenseg },
-      sourceTab: "sevenseg",
+      sourceTab: "onehotdecoder",
       openFiles: ["onehotdecoder", "sevenseg"],
       errors: {}
     };
