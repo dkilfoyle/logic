@@ -82,12 +82,36 @@ const BINARY_OPERATOR = choice([
   str("~|").map(x => "nor")
 ]);
 
-const identifier = ws(
-  sequenceOf([
-    regex(/^[a-zA-Z_]/),
-    possibly(regex(/^[a-zA-Z0-9_]+/)).map(x => (x === null ? "" : x))
-  ])
-).map(x => x.join(""));
+const keywords = [
+  "module",
+  "begin",
+  "input",
+  "output",
+  "wire",
+  "assign",
+  "endmodule",
+  "buffer",
+  "and",
+  "not",
+  "or",
+  "xor",
+  "nor",
+  "nand"
+];
+
+const identifier = coroutine(function*() {
+  const id = yield either(
+    ws(
+      sequenceOf([
+        regex(/^[a-zA-Z_]/),
+        possibly(regex(/^[a-zA-Z0-9_]+/)).map(x => (x === null ? "" : x))
+      ])
+    ).map(x => x.join(""))
+  );
+  if (id.isError) yield fail();
+  if (keywords.some(x => x == id.value)) yield fail();
+  return id.value;
+});
 
 const number = coroutine(function*() {
   const bits = yield digits;
@@ -220,15 +244,19 @@ const arrayDimParser = coroutine(function*() {
   return dim;
 });
 
+const listOfIds = sequenceOf([
+  ws(identifier),
+  many(takeRight(str(","))(ws(identifier)))
+]).map(x => x.flat());
+
 const portParser = coroutine(function*() {
   const type = yield choice([ws(str("input")), ws(str("output"))]).errorMap(
     lintError("Invalid port type: must be 'input' or 'output'")
   );
   const arrayDim = yield possibly(arrayDimParser);
-  const id = yield ws(identifier).errorMap(
-    lintError("Invalid port identifier")
-  );
-  return { type, dim: arrayDim, id };
+  const ids = yield listOfIds.errorMap(lintError("Invalid port identifier"));
+  return ids.map(x => ({ type, dim: arrayDim, id: x }));
+  // return { type, dim: arrayDim, id: ids[0] };
 });
 
 const wireParser = coroutine(function*() {
@@ -251,13 +279,9 @@ const moduleParser = coroutine(function*() {
 
   const ports = yield possibly(
     betweenRoundBrackets(
-      commaSeparated(
-        portParser.errorMap(
-          (error, index) => `Invalid ports section : ${error}`
-        )
-      )
+      commaSeparated(portParser.errorMap(lintError("Invalid ports section")))
     )
-  );
+  ).map(x => x.flat());
 
   yield ws(str(";"));
 
@@ -288,8 +312,9 @@ const moduleParser = coroutine(function*() {
 
   yield ws(str("endmodule"));
 
-  var module = { type: "module", id, ports, wires, statements };
+  var module = { type: "module", id, ports: ports.flat(), wires, statements };
   if (clock) module.clock = clock;
+  // console.log(module);
   return module;
 });
 

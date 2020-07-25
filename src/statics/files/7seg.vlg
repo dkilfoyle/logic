@@ -19,17 +19,8 @@ A B C | Fa Fb Fc Fd Fe Ff Fg
 
 // using standard gate statements
 module SevenSeg(
-  input A,
-  input B,
-  input C,
-  output Fa,
-  output Fb,
-  output Fc,
-  output Fd,
-  output Fe,
-  output Ff,
-  output Fg);
-
+  input A, B, C,
+  output Fa, Fb, Fc, Fd, Fe, Ff, Fg);
 
   assign Fa = (((~A & ~C) | B) | (A & C));
   assign Fb = (((~B & ~C) | ~A) | (B & C));
@@ -45,13 +36,7 @@ module SevenSeg(
 endmodule
 
 module main(
-  output Fa,
-  output Fb,
-  output Fc,
-  output Fd,
-  output Fe,
-  output Ff,
-  output Fg);
+  output Fa, Fb, Fc, Fd, Fe, Ff, Fg);
 
   wire a, b, c;
 
