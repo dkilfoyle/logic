@@ -150,3 +150,47 @@ CodeMirror.registerHelper("hint", "dictionaryHint", function(editor) {
 CodeMirror.commands.autocomplete = function(cm) {
   CodeMirror.showHint(cm, CodeMirror.hint.dictionaryHint);
 };
+
+CodeMirror.commands.snippet = function(cm) {
+  CodeMirror.showHint(cm, showSnippets);
+};
+
+const snippets = [
+  {
+    text: `module Name (
+   input A,B,C,
+   output X,Y);
+   // statements here
+endmodule`,
+    displayText: "module definition"
+  },
+  {
+    text: `ModuleName instanceName(
+  .p1(m1), // .instanceParamater(LocalVar)
+  .p2(m2),
+  .p3(m3)
+);`,
+    displayText: "instance declaration"
+  },
+  { text: "and(gateID, input1, input2);", displayText: "gate declaration" },
+  { text: "assign ID = (A & B);", displayText: "assign declaration" }
+];
+
+function showSnippets(codemirror) {
+  const cursor = codemirror.getCursor();
+  const token = codemirror.getTokenAt(cursor);
+  const start = token.start;
+  const end = cursor.ch;
+  const line = cursor.line;
+  const currentWord = token.string;
+
+  const list = snippets.filter(function(item) {
+    return item.text.indexOf(currentWord) >= 0;
+  });
+
+  return {
+    list: list.length ? list : snippets,
+    from: CodeMirror.Pos(line, start),
+    to: CodeMirror.Pos(line, end)
+  };
+}
