@@ -71,7 +71,7 @@ quasar dev
 6. Improve schematic with time slider to animate state
 7. Experiment with better schematic graph layouts, custom combo
 8. More linting
-9. Code hints, comment hotkey
+9. Code hints, ~~comment hotkey~~
 
 ## Acknowledgements
 

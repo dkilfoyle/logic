@@ -50,7 +50,7 @@ export default {
         line: true,
         extraKeys: {
           "Ctrl-Space": "autocomplete",
-          "Ctrl-L": "toggleComment",
+          "Ctrl-/": "toggleComment",
           "Ctrl-Q": function(cm) {
             cm.foldCode(cm.getCursor());
           }

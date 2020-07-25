@@ -231,9 +231,11 @@ const gateParser = coroutine(function*() {
 
 const assignParser = coroutine(function*() {
   yield str("assign ");
-  const id = yield ws(identifier);
+  const id = yield ws(identifier).errorMap(
+    lintError("Invalid assign identifier")
+  );
   yield str("=");
-  const value = yield expression;
+  const value = yield expression.errorMap(lintError("Invalid expression"));
   yield str(";");
   return { type: "assign", id, value };
 });

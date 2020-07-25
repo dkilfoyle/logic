@@ -9,6 +9,9 @@ String.prototype.regexIndexOf = function(regex, startpos) {
 };
 
 CodeMirror.defineSimpleMode("vlg", {
+  meta: {
+    lineComment: "//"
+  },
   start: [
     { regex: /"(?:[^\\]|\\.)*?(?:"|$)/, token: "string" },
     {
@@ -102,3 +105,48 @@ CodeMirror.registerHelper("lint", "vlg", text => {
 
   return found;
 });
+
+var dictionary = {
+  start: [
+    "nand(",
+    "and(",
+    "or(",
+    "xor(",
+    "nor(",
+    "not(",
+    "control",
+    "input",
+    "output",
+    "wire",
+    "assign"
+  ],
+  none: ["module"]
+};
+
+CodeMirror.registerHelper("hint", "dictionaryHint", function(editor) {
+  var cur = editor.getCursor();
+  var curLine = editor.getLine(cur.line);
+  var start = cur.ch;
+  var end = start;
+  var state = editor.getTokenAt(editor.getCursor()).state;
+  // console.log(state);
+  while (end < curLine.length && /[\w$]/.test(curLine.charAt(end))) ++end;
+  while (start && /[\w$]/.test(curLine.charAt(start - 1))) --start;
+  var curWord = start !== end && curLine.slice(start, end);
+  var regex = new RegExp("^" + curWord, "i");
+  // console.log(dictionary[state.section]);
+  return {
+    list: (!curWord
+      ? dictionary[state.state]
+      : dictionary[state.state].filter(function(item) {
+          return item.match(regex);
+        })
+    ).sort(),
+    from: CodeMirror.Pos(cur.line, start),
+    to: CodeMirror.Pos(cur.line, end)
+  };
+});
+
+CodeMirror.commands.autocomplete = function(cm) {
+  CodeMirror.showHint(cm, CodeMirror.hint.dictionaryHint);
+};
