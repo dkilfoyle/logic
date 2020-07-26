@@ -156,6 +156,8 @@ const primary = recursiveParser(() =>
   })
 );
 
+// TODO: Need help here - how can we make sequenceOf(expression, binary_operator, expression)??
+// This causes an endloss loop and stack overflow but is needed to have expressions like (A & B) | C | D
 const expression = choice([
   sequenceOf([primary, ws(BINARY_OPERATOR), primary]).map(x => ({
     type: "binaryExpression",

@@ -14,7 +14,11 @@
             href="https://github.com/dkilfoyle/logic"
             rel="noopener"
             target="_blank"
-            ><q-btn flat icon="img:statics/icons/GitHub-Mark-32px.png"></q-btn
+            ><q-btn
+              flat
+              color="secondary"
+              icon="img:statics/icons/GitHub-Mark-32px.png"
+            ></q-btn
           ></a>
         </div>
       </q-toolbar>
