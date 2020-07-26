@@ -43,6 +43,8 @@ const lintError = (lintError, severity) => (error, index) => {
   return lintError;
 };
 
+const asType = type => x => ({ type, value: x });
+
 // Utility parsers ===================================================================
 
 const singleLineComment = sequenceOf([
@@ -74,13 +76,14 @@ const anyOfArray = strs => choice(strs.map(x => str(x)));
 // Token parsers ===============================================================
 
 const UNARY_OPERATOR = choice([str("~")]);
-const BINARY_OPERATOR = choice([
-  str("&").map(x => "and"),
-  str("|").map(x => "or"),
-  str("^").map(x => "xor"),
-  str("~&").map(x => "nand"),
-  str("~|").map(x => "nor")
-]);
+
+// const BINARY_OPERATOR = choice([
+//   str("&").map(x => "and"),
+//   str("|").map(x => "or"),
+//   str("^").map(x => "xor"),
+//   str("~&").map(x => "nand"),
+//   str("~|").map(x => "nor")
+// ]);
 
 const keywords = [
   "module",
@@ -143,30 +146,30 @@ const debug = msg => x => {
   return x;
 };
 
-const primary = recursiveParser(() =>
-  sequenceOf([
-    possibly(UNARY_OPERATOR),
-    choice([
-      ws(definedVariableParser).map(x => ({ type: "variable", id: x })),
-      betweenRoundBrackets(expression)
-    ])
-  ]).map(x => {
-    x[1].inverse = x[0] ? true : false;
-    return x[1];
-  })
-);
+// const primary = recursiveParser(() =>
+//   sequenceOf([
+//     possibly(UNARY_OPERATOR),
+//     choice([
+//       ws(definedVariableParser).map(x => ({ type: "variable", id: x })),
+//       betweenRoundBrackets(expression)
+//     ])
+//   ]).map(x => {
+//     x[1].inverse = x[0] ? true : false;
+//     return x[1];
+//   })
+// );
 
-// TODO: Need help here - how can we make sequenceOf(expression, binary_operator, expression)??
-// This causes an endloss loop and stack overflow but is needed to have expressions like (A & B) | C | D
-const expression = choice([
-  sequenceOf([primary, ws(BINARY_OPERATOR), primary]).map(x => ({
-    type: "binaryExpression",
-    operand1: x[0],
-    operator: x[1],
-    operand2: x[2]
-  })),
-  primary
-]).errorMap(lintError("Invalid expression"));
+// // TODO: Need help here - how can we make sequenceOf(expression, binary_operator, expression)??
+// // This causes an endloss loop and stack overflow but is needed to have expressions like (A & B) | C | D
+// const expression = choice([
+//   sequenceOf([primary, ws(BINARY_OPERATOR), primary]).map(x => ({
+//     type: "binaryExpression",
+//     operand1: x[0],
+//     operator: x[1],
+//     operand2: x[2]
+//   })),
+//   primary
+// ]).errorMap(lintError("Invalid expression"));
 
 const definedControlParser = coroutine(function*() {
   const variable = yield identifier.errorMap(lintError("Invalid identifier"));
@@ -230,6 +233,37 @@ const gateParser = coroutine(function*() {
 });
 
 // Assign parser ======================================================
+
+const BINARY_OPERATOR = choice([
+  str("&").map(asType("and")),
+  str("|").map(asType("or")),
+  str("^").map(asType("xor")),
+  str("~&").map(asType("nand")),
+  str("~|").map(asType("nor"))
+]);
+
+const bracketedExpr = coroutine(function*() {
+  const states = {
+    OPEN_BRACKET: 0,
+    OPERATOR_OR_CLOSING_BRACKET: 1,
+    ELEMENT_OR_OPENING_BRACKET: 2,
+    CLOSE_BRACKET: 3
+  };
+  let state = states.ELEMENT_OR_OPENING_BRACKET;
+  const expr = [];
+  const stack = [expr];
+  yield char("(");
+
+  while (true) {
+    const nextChar = yield peek();
+
+    if (state === states.OPEN_BRACKET) {
+    } else if (state === states.CLOSE_BRACKET) {
+    } else if (state === states.ELEMENT_OR_OPENING_BRACKET) {
+    } else if (state === states.OPERATOR_OR_CLOSING_BRACKET) {
+    }
+  }
+});
 
 const assignParser = coroutine(function*() {
   yield str("assign ");
