@@ -149,31 +149,6 @@ const debug = msg => x => {
   return x;
 };
 
-// const primary = recursiveParser(() =>
-//   sequenceOf([
-//     possibly(UNARY_OPERATOR),
-//     choice([
-//       ws(definedVariableParser).map(x => ({ type: "variable", id: x })),
-//       betweenRoundBrackets(expression)
-//     ])
-//   ]).map(x => {
-//     x[1].inverse = x[0] ? true : false;
-//     return x[1];
-//   })
-// );
-
-// // TODO: Need help here - how can we make sequenceOf(expression, binary_operator, expression)??
-// // This causes an endloss loop and stack overflow but is needed to have expressions like (A & B) | C | D
-// const expression = choice([
-//   sequenceOf([primary, ws(BINARY_OPERATOR), primary]).map(x => ({
-//     type: "binaryExpression",
-//     operand1: x[0],
-//     operator: x[1],
-//     operand2: x[2]
-//   })),
-//   primary
-// ]).errorMap(lintError("Invalid expression"));
-
 const definedControlParser = coroutine(function*() {
   const variable = yield identifier.errorMap(lintError("Invalid identifier"));
 
@@ -238,30 +213,36 @@ const gateParser = coroutine(function*() {
 // Assign parser ======================================================
 
 const typifyBracketedExpression = expr => {
-  const asBracketed = asType("BRACKETED_EXPRESSION");
-  console.log("typify input: ", expr);
+  const asBracketed = asType("expression");
+  let invertNext = false;
   return asBracketed(
-    expr.map(element => {
-      console.log(
-        `Element ${element.toString()}: isArray ${Array.isArray(element)}`
-      );
-      if (Array.isArray(element)) {
-        return typifyBracketedExpression(element);
-      }
-      return element;
-    })
+    expr
+      .map(element => {
+        if (element.type == "invert") {
+          invertNext = true;
+          return null;
+        }
+        if (Array.isArray(element)) {
+          let x = typifyBracketedExpression(element);
+          x.invert = invertNext;
+          invertNext = false;
+          return x;
+        }
+        if (element.type == "variable") element.invert = invertNext;
+        invertNext = false;
+        return element;
+      })
+      .filter(xx => xx != null)
   );
 };
 
 const BINARY_OPERATOR = choice([
-  str("&"),
-  str("|"),
-  str("^"),
-  str("~&"),
-  str("~|")
+  str("&").map(x => "and"),
+  str("|").map(x => "or"),
+  str("^").map(x => "xor"),
+  str("~&").map(x => "nand"),
+  str("~|").map(x => "nor")
 ]).map(asType("binaryop"));
-
-const UNARY_OPERATOR = choice([str("~").map(asType("unaryop"))]);
 
 const bracketedExpr = coroutine(function*() {
   const states = {
@@ -270,14 +251,13 @@ const bracketedExpr = coroutine(function*() {
     ELEMENT_OR_OPENING_BRACKET: 2,
     CLOSE_BRACKET: 3
   };
-  const getState = () => Object.keys(states)[state];
+  // const getState = () => Object.keys(states)[state];
   let state = states.ELEMENT_OR_OPENING_BRACKET;
   const expr = [];
   const stack = [expr];
-  let invert = false;
 
   yield char("(");
-  console.log("start bracketed expression. State: ", getState());
+  // console.log(`start bracketed expression. State: ${getState()}`);
 
   while (true) {
     const nextChar = yield peek;
@@ -289,14 +269,11 @@ const bracketedExpr = coroutine(function*() {
       let popped = stack.push(last(expr));
       yield optionalWhitespace;
       state = states.ELEMENT_OR_OPENING_BRACKET;
-      console.log(
-        "Found opening bracket. Next state: ",
-        getState(),
-        ", Popped: ",
-        popped
-      );
+      // console.log(
+      //   `Found opening bracket. Next state: ${getState()}, Popped: ${popped}`
+      // );
     } else if (state === states.CLOSE_BRACKET) {
-      console.log("State Close Bracket");
+      // console.log("State Close Bracket");
       yield char(")");
       let popped = stack.pop();
       if (stack.length === 0) {
@@ -305,30 +282,21 @@ const bracketedExpr = coroutine(function*() {
       }
       yield optionalWhitespace;
       state = states.OPERATOR_OR_CLOSING_BRACKET;
-      console.log(
-        "Found closing bracket. Next state: ",
-        getState(),
-        ", Popped: ",
-        popped
-      );
+      // console.log(
+      //   `Found closing bracket. Next state: ${getState()}, popped: ${popped}`
+      // );
     } else if (state === states.ELEMENT_OR_OPENING_BRACKET) {
-      console.log("State Element or Opening Bracket");
+      // console.log("State Element or Opening Bracket");
       if (nextChar == ")") {
         yield fail("Unexpected end of expression");
       }
 
       if (nextChar == "~") {
-        // invert = true;
-        last(stack).push({ type: "unary", value: "not" });
+        last(stack).push({ type: "invert", value: "not" });
         yield str("~");
         yield optionalWhitespace;
         nextChar = yield peek;
-        console.log(
-          "Found unary. Expr: ",
-          last(stack),
-          " next char = ",
-          nextChar
-        );
+        // console.log(`"Found invert: next char = ${nextChar}`);
       }
       if (nextChar == "(") {
         state = states.OPEN_BRACKET;
@@ -338,15 +306,10 @@ const bracketedExpr = coroutine(function*() {
         );
         yield optionalWhitespace;
         state = states.OPERATOR_OR_CLOSING_BRACKET;
-        console.log(
-          "Found variable. Next State: ",
-          getState(),
-          ", Expr: ",
-          last(stack)
-        );
+        // console.log(`"Found variable. Next State: ${getState()}, Expr: ${last(stack)}`);
       }
     } else if (state === states.OPERATOR_OR_CLOSING_BRACKET) {
-      console.log("state Operator or closing bracket");
+      // console.log("state Operator or closing bracket");
       if (nextChar === ")") {
         state = states.CLOSE_BRACKET;
         continue;
@@ -354,17 +317,12 @@ const bracketedExpr = coroutine(function*() {
       last(stack).push(yield BINARY_OPERATOR);
       yield optionalWhitespace;
       state = states.ELEMENT_OR_OPENING_BRACKET;
-      console.log(
-        "Found operator. Next State: ",
-        getState(),
-        ", Expr: ",
-        last(stack)
-      );
+      // console.log(`Found operator. Next State: ${getState()}, Expr: ${last(stack)}`);
     } else {
       throw new Error("Unknown state");
     }
   }
-  console.log("Expr: ", expr);
+  // console.log("Expr: ", expr);
   return typifyBracketedExpression(expr);
 });
 
@@ -374,10 +332,10 @@ const assignParser = coroutine(function*() {
     lintError("Invalid assign identifier")
   );
   yield ws(str("="));
-  const expr = yield bracketedExpr.errorMap(lintError("Invalid expression"));
+  const value = yield bracketedExpr.errorMap(lintError("Invalid expression"));
   yield str(";");
-  console.log("assignParser: ", id, expr);
-  return { type: "assign", id, expr };
+  console.log("assignParser: ", id, value);
+  return { type: "assign", id, value };
 });
 
 // MODULE =============================================================

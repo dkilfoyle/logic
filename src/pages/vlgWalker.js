@@ -1,17 +1,17 @@
 var modules, instances, gates;
 
-const createInstance = (parentNamespace, instance) => {
-  // instance of main will have empty parentNamespace
-  if (parentNamespace !== "") parentNamespace = parentNamespace + ".";
+const createInstance = (outputNamespace, instance) => {
+  // instance of main will have empty outputNamespace
+  if (outputNamespace !== "") outputNamespace = outputNamespace + ".";
 
   const instanceModule = modules[instance.module];
 
   const varMap = instance.params.reduce((acc, param) => {
     acc[param.param] = {
-      globalid: parentNamespace + param.mapped.id,
+      globalid: outputNamespace + param.mapped.id,
       type: "port",
       moduleid: param.param,
-      instanceid: parentNamespace + instance.id + "." + param.param,
+      instanceid: outputNamespace + instance.id + "." + param.param,
       porttype: instanceModule.ports.find(x => x.id == param.param).type
     };
     return acc;
@@ -19,8 +19,8 @@ const createInstance = (parentNamespace, instance) => {
 
   const addWire = wireLocalID => {
     varMap[wireLocalID] = {
-      globalid: parentNamespace + instance.id + "." + wireLocalID,
-      instanceid: parentNamespace + instance.id + "." + wireLocalID,
+      globalid: outputNamespace + instance.id + "." + wireLocalID,
+      instanceid: outputNamespace + instance.id + "." + wireLocalID,
       moduleid: wireLocalID,
       type: "wire"
     };
@@ -31,80 +31,86 @@ const createInstance = (parentNamespace, instance) => {
 
   // create all the gates first because instance processes needs to refer back to gates
   const addGate = gate => {
+    console.log(gate);
     gates.push({
       id: varMap[gate.id].instanceid,
       logic: gate.gate,
       inputs: gate.params.map(param => varMap[param].globalid),
-      instance: parentNamespace + instance.id,
+      instance: outputNamespace + instance.id,
       state: 0
     });
-    return varMap[gate.id].instanceid;
+    return varMap[gate.id].moduleid;
   };
 
   instanceModule.statements.filter(x => x.type == "gate").forEach(addGate);
 
-  const evaluateAssign = (node, parent) => {
-    // if (node.type == "variable") {
-    //   console.log("evaluateAssign: ", node.type, node.id, node.inverse, parent);
-    // } else
-    //   console.log(
-    //     "evaluateAssign: ",
-    //     node.type,
-    //     node.inverse,
-    //     node.operator,
-    //     node.operand1,
-    //     node.operand2,
-    //     parent
-    //   );
-    if (node.inverse) {
-      // prepare an inverter gate to pipe the node output
-      if (!varMap["not" + node.id]) {
-        // add a notA wire (if it doesn't already exist)
-        // add a gate: not(notA, A)
-        const notA = addWire("not" + node.id);
-        addGate({
-          id: "not" + node.id,
-          gate: "not",
-          params: [node.id],
-          instance: parentNamespace + instance.id,
-          state: 0
+  const evaluateAssignNode = (node, output) => {
+    console.log(
+      `output: ${output}, Type: ${node.type}, Invert: ${node.invert}`
+    );
+
+    let lastOutput;
+
+    if (node.type == "expression") {
+      let expr = node.value;
+      if (expr.length < 3)
+        throw new Error("Invalid expression length: must be at least 3");
+      if (
+        !(
+          expr[0].type == "variable" &&
+          expr[1].type == "binaryop" &&
+          expr[2].type == "variable"
+        )
+      )
+        throw new Error("Invalid sequence of expression values");
+
+      console.log(" -- " + expr.map(x => x.type + ":" + x.value).join(", "));
+
+      // for each operation triplet
+      for (let i = 1; i < expr.length; i += 2) {
+        let curOutput = i == expr.length - 2 ? output : output + "op" + i; // final operation, connect to final output
+        if (!varMap[curOutput]) addWire(curOutput);
+        lastOutput = addGate({
+          id: curOutput,
+          gate: expr[i].value,
+          params: [
+            i == 1
+              ? evaluateAssignNode(expr[i - 1], output + "op" + (i - 1))
+              : lastOutput,
+            evaluateAssignNode(expr[i + 1], output + "op" + (i + 1))
+          ]
         });
       }
-      // return "not" + node.id;
+    } else if (node.type == "variable") {
+      lastOutput = node.value;
     }
 
-    if (node.type === "variable") {
-      return node.inverse ? "not" + node.id : node.id;
-    }
-
-    if (node.type === "binaryExpression") {
-      // add an intermediary wire if necessary
-      if (!varMap[parent]) addWire(parent);
-      var newgate = {
-        id: parent,
-        gate: node.operator,
-        params: [
-          evaluateAssign(node.operand1, parent + "op1"),
-          evaluateAssign(node.operand2, parent + "op2")
-        ],
-        instance: parentNamespace + instance.id,
-        state: 0
-      };
-      // console.log("Adding gate: ", newgate);
-      addGate(newgate);
-      return parent;
+    if (node.invert) {
+      // prepare an inverter gate to pipe the node output
+      if (!varMap["not" + lastOutput]) {
+        // add a notA wire (if it doesn't already exist)
+        // add a gate: not(notA, A)
+        const notA = addWire("not" + lastOutput);
+        addGate({
+          id: "not" + lastOutput,
+          gate: "not",
+          params: [lastOutput]
+        });
+      }
+      return "not" + lastOutput;
+    } else {
+      return lastOutput;
     }
   };
 
   instanceModule.statements
     .filter(x => x.type == "assign")
     .forEach(statement => {
-      // console.log("Assign: ", statement.id);
-      return evaluateAssign(statement.value, statement.id);
+      return evaluateAssignNode(statement.value, statement.id);
     });
 
   var newInstance = {
-    id: parentNamespace + instance.id,
+    id: outputNamespace + instance.id,
     inputs: Object.values(varMap).filter(
       x => x.type == "port" && x.porttype == "input"
     ),
@@ -119,12 +125,12 @@ const createInstance = (parentNamespace, instance) => {
     .filter(x => x.type == "instance")
     .forEach(statement => {
       var childInstance = createInstance(
-        parentNamespace + instance.id,
+        outputNamespace + instance.id,
         statement
       );
 
-      // connect childInstance outputs to parent instance gates
-      // mapped parent must exist as gate, at least as buffer
+      // connect childInstance outputs to output instance gates
+      // mapped output must exist as gate, at least as buffer
       childInstance.outputs.forEach(o => {
         gates.find(g => g.id == o.globalid).inputs.push(o.instanceid);
       });
@@ -166,3 +172,56 @@ const walk = ast => {
 };
 
 export default walk;
+
+// const evaluateAssign = (node, output) => {
+//   // if (node.type == "variable") {
+//   //   console.log("evaluateAssign: ", node.type, node.id, node.inverse, output);
+//   // } else
+//   //   console.log(
+//   //     "evaluateAssign: ",
+//   //     node.type,
+//   //     node.inverse,
+//   //     node.operator,
+//   //     node.operand1,
+//   //     node.operand2,
+//   //     output
+//   //   );
+//   if (node.inverse) {
+//     // prepare an inverter gate to pipe the node output
+//     if (!varMap["not" + node.id]) {
+//       // add a notA wire (if it doesn't already exist)
+//       // add a gate: not(notA, A)
+//       const notA = addWire("not" + node.id);
+//       addGate({
+//         id: "not" + node.id,
+//         gate: "not",
+//         params: [node.id],
+//         instance: outputNamespace + instance.id,
+//         state: 0
+//       });
+//     }
+//     // return "not" + node.id;
+//   }
+
+//   if (node.type === "variable") {
+//     return node.inverse ? "not" + node.id : node.id;
+//   }
+
+//   if (node.type === "binaryExpression") {
+//     // add an intermediary wire if necessary
+//     if (!varMap[output]) addWire(output);
+//     var newgate = {
+//       id: output,
+//       gate: node.operator,
+//       params: [
+//         evaluateAssign(node.operand1, output + "op1"),
+//         evaluateAssign(node.operand2, output + "op2")
+//       ],
+//       instance: outputNamespace + instance.id,
+//       state: 0
+//     };
+//     // console.log("Adding gate: ", newgate);
+//     addGate(newgate);
+//     return output;
+//   }
+// };
