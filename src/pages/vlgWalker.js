@@ -53,17 +53,6 @@ const createInstance = (outputNamespace, instance) => {
 
     if (node.type == "expression") {
       let expr = node.value;
-      if (expr.length < 3)
-        throw new Error("Invalid expression length: must be at least 3");
-      if (
-        !(
-          expr[0].type == "variable" &&
-          expr[1].type == "binaryop" &&
-          expr[2].type == "variable"
-        )
-      )
-        throw new Error("Invalid sequence of expression values");
-
       console.log(" -- " + expr.map(x => x.type + ":" + x.value).join(", "));
 
       // for each operation triplet
