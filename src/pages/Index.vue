@@ -287,8 +287,8 @@ export default {
       tab: "code",
       layout: "dagre",
       source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1 },
-      sourceTab: "SevenSeg",
-      openFiles: ["OneHotDecoder", "Mux2_1", "Scratch", "SevenSeg"],
+      sourceTab: "Mux2_1",
+      openFiles: ["Scratch", "OneHotDecoder", "SevenSeg", "Mux2_1"],
       errors: {}
     };
   },

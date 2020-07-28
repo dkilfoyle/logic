@@ -63,15 +63,27 @@ quasar dev
 
 ## TODO
 
-1. More sample code circuits - ~~onehotencoder~~, ~~7segmentencoder~~
-2. ~~Support bitwise statements to generate the logic gates~~ (eg Q = (A & B) | ~C)
-3. Support truth tables to generate optimised logic gates
-4. Support bit vectors
+1. More sample code circuits
+   1. ~~One hot encoder~~
+   1. ~~2 to 1 multiplexer2_1~~
+   1. ~~7 segment encoder~~
+   1. ~~1 bit adder~~
+   1. ~~D flip-flop~~
+   1. 4 bit ripple adder
+   1. 4 to 1 multiplexer with bit vector select line
+   1. Ripple counter
+   1. Shift register
+   1. FSMs
+2. ~~Support bitwise statements to generate the logic gates eg Q = (A & B) | ~C~~
+3. Reuse intermediary gates
+4. Support bit vector type
 5. Improve gate tables with time slider to animate state
 6. Improve schematic with time slider to animate state
 7. Experiment with better schematic graph layouts, custom combo
 8. More linting
 9. ~~Code hints (Ctrl-Space)~~, ~~snippets (Ctrl-Shift-Space)~~, ~~comment hotkey~~,
+10. Future?
+    a) Truth tables to generate optimised logic gates
 
 ## Acknowledgements
 
