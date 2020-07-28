@@ -12,10 +12,10 @@ module OneHotDecoderBitwise (
   input a, b,
   output F3, F2, F1, F0);
 
-  assign F0 = (a & b | a);
-  //assign F1 = (~a & b);
-  //assign F2 = (a & ~b);
-  //assign F3 = (a & b);
+  assign F0 = (~a & ~b);
+  assign F1 = (~a & b);
+  assign F2 = (a & ~b);
+  assign F3 = (a & b);
 endmodule
 
 // using standard gate statements

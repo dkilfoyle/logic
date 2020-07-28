@@ -283,8 +283,8 @@ export default {
       tab: "code",
       layout: "dagre",
       source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1 },
-      sourceTab: "OneHotDecoder",
-      openFiles: ["OneHotDecoder", "Mux2_1", "Scratch"],
+      sourceTab: "SevenSeg",
+      openFiles: ["OneHotDecoder", "Mux2_1", "Scratch", "SevenSeg"],
       errors: {}
     };
   },

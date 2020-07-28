@@ -76,35 +76,37 @@ CodeMirror.registerHelper("fold", "vlg", function(cm, start) {
   };
 });
 
-CodeMirror.registerHelper("lint", "vlg", text => {
-  if (text == "") return [];
-  var found = [];
+// use this code when cmOptions.lint=true.
+// otherwise use lint: {getAnnotations:myValidator} where myValidator(text, updateLinting, options) does the parsing and returns array of errors
+// CodeMirror.registerHelper("lint", "vlg", text => {
+//   if (text == "") return [];
+//   var found = [];
 
-  const parse = vlgParser(text);
+//   const parse = vlgParser(text);
 
-  var finder = lineColumn(text, { origin: 0 });
+//   var finder = lineColumn(text, { origin: 0 });
 
-  const addError = (error, index, severity) => {
-    var errorStart = finder.fromIndex(index);
-    var errorEnd = finder.fromIndex(
-      Math.max(text.regexIndexOf(/[\s\(\)\[\]\{\},=]/, index), index)
-    );
-    found.push({
-      message: error,
-      severity,
-      from: CodeMirror.Pos(errorStart.line, errorStart.col),
-      to: CodeMirror.Pos(errorEnd.line, errorEnd.col)
-    });
-  };
+//   const addError = (error, index, severity) => {
+//     var errorStart = finder.fromIndex(index);
+//     var errorEnd = finder.fromIndex(
+//       Math.max(text.regexIndexOf(/[\s\(\)\[\]\{\},=]/, index), index)
+//     );
+//     found.push({
+//       message: error,
+//       severity,
+//       from: CodeMirror.Pos(errorStart.line, errorStart.col),
+//       to: CodeMirror.Pos(errorEnd.line, errorEnd.col)
+//     });
+//   };
 
-  parse.lint.forEach(x => addError(x.error, x.index, x.severity));
-  if (parse.parseState.isError) {
-    if (parse.lint.length == 0)
-      addError(parse.parseState.error, parse.parseState.index);
-  }
+//   parse.lint.forEach(x => addError(x.error, x.index, x.severity));
+//   if (parse.parseState.isError) {
+//     if (parse.lint.length == 0)
+//       addError(parse.parseState.error, parse.parseState.index);
+//   }
 
-  return found;
-});
+//   return found;
+// });
 
 var dictionary = {
   start: [
