@@ -1,5 +1,4 @@
-/* 
-2 to 4 one hot decoder
+/* 2 to 4 one hot decoder
 a b | F3 F2 F1 F0
 0 0 |  0  0  0  1 
 0 1 |  0  0  1  0
@@ -12,10 +11,10 @@ module OneHotDecoderBitwise (
   input a, b,
   output F3, F2, F1, F0);
 
-  assign F0 = (~a & ~b);
-  assign F1 = (~a & b);
-  assign F2 = (a & ~b);
-  assign F3 = (a & b);
+  assign F0 = ~a & ~b;
+  assign F1 = ~a & b;
+  assign F2 = a & ~b;
+  assign F3 = a & b;
 endmodule
 
 // using standard gate statements

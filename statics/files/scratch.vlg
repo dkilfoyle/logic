@@ -9,7 +9,7 @@ module MyModule (
   or(  Y, a, b );
 
   // alternative bitwise format
-  // assign X = (a & b);
+  // assign X = a & b;
 endmodule
 
 module main(
