@@ -31,7 +31,7 @@ const createInstance = (outputNamespace, instance) => {
 
   // create all the gates first because instance processes needs to refer back to gates
   const addGate = gate => {
-    console.log(gate);
+    // console.log(gate);
     gates.push({
       id: varMap[gate.id].instanceid,
       logic: gate.gate,
@@ -45,15 +45,14 @@ const createInstance = (outputNamespace, instance) => {
   instanceModule.statements.filter(x => x.type == "gate").forEach(addGate);
 
   const evaluateAssignNode = (node, output) => {
-    console.log(
-      `output: ${output}, Type: ${node.type}, Invert: ${node.invert}`
-    );
-
+    // console.log(`output: ${output}, Type: ${node.type}`);
     let lastOutput;
-
-    if (node.type == "expression") {
+    if (
+      node.type == "BRACKETED_EXPRESSION" ||
+      node.type == "ASSIGN_EXPRESSION"
+    ) {
       let expr = node.value;
-      console.log(" -- " + expr.map(x => x.type + ":" + x.value).join(", "));
+      // console.log(" -- " + expr.map(x => x.type + ":" + x.value).join(", "));
 
       // for each operation triplet
       for (let i = 1; i < expr.length; i += 2) {
@@ -70,26 +69,32 @@ const createInstance = (outputNamespace, instance) => {
           ]
         });
       }
-    } else if (node.type == "variable") {
-      lastOutput = node.value;
-    }
-
-    if (node.invert) {
-      // prepare an inverter gate to pipe the node output
-      if (!varMap["not" + lastOutput]) {
-        // add a notA wire (if it doesn't already exist)
-        // add a gate: not(notA, A)
-        const notA = addWire("not" + lastOutput);
-        addGate({
-          id: "not" + lastOutput,
-          gate: "not",
-          params: [lastOutput]
-        });
-      }
-      return "not" + lastOutput;
-    } else {
       return lastOutput;
     }
+
+    if (node.type == "VARIABLE") {
+      lastOutput = node.value;
+      if (node.invert) {
+        // prepare an inverter gate to pipe the node output
+        if (!varMap["not" + lastOutput]) {
+          // add a notA wire (if it doesn't already exist)
+          // add a gate: not(notA, A)
+          const notA = addWire("not" + lastOutput);
+          addGate({
+            id: "not" + lastOutput,
+            gate: "not",
+            params: [lastOutput]
+          });
+        }
+        return "not" + lastOutput;
+      } else {
+        return lastOutput;
+      }
+    }
+
+    throw new Error(
+      "vlgWalker shouldn't be here. Node is not VARIABLE or EXPRESSION"
+    );
   };
 
   instanceModule.statements
@@ -161,56 +166,3 @@ const walk = ast => {
 };
 
 export default walk;
-
-// const evaluateAssign = (node, output) => {
-//   // if (node.type == "variable") {
-//   //   console.log("evaluateAssign: ", node.type, node.id, node.inverse, output);
-//   // } else
-//   //   console.log(
-//   //     "evaluateAssign: ",
-//   //     node.type,
-//   //     node.inverse,
-//   //     node.operator,
-//   //     node.operand1,
-//   //     node.operand2,
-//   //     output
-//   //   );
-//   if (node.inverse) {
-//     // prepare an inverter gate to pipe the node output
-//     if (!varMap["not" + node.id]) {
-//       // add a notA wire (if it doesn't already exist)
-//       // add a gate: not(notA, A)
-//       const notA = addWire("not" + node.id);
-//       addGate({
-//         id: "not" + node.id,
-//         gate: "not",
-//         params: [node.id],
-//         instance: outputNamespace + instance.id,
-//         state: 0
-//       });
-//     }
-//     // return "not" + node.id;
-//   }
-
-//   if (node.type === "variable") {
-//     return node.inverse ? "not" + node.id : node.id;
-//   }
-
-//   if (node.type === "binaryExpression") {
-//     // add an intermediary wire if necessary
-//     if (!varMap[output]) addWire(output);
-//     var newgate = {
-//       id: output,
-//       gate: node.operator,
-//       params: [
-//         evaluateAssign(node.operand1, output + "op1"),
-//         evaluateAssign(node.operand2, output + "op2")
-//       ],
-//       instance: outputNamespace + instance.id,
-//       state: 0
-//     };
-//     // console.log("Adding gate: ", newgate);
-//     addGate(newgate);
-//     return output;
-//   }
-// };

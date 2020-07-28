@@ -217,6 +217,10 @@ const evaluate = (components, componentLookup) => {
         return;
       }
       const aOut = componentLookup[component.inputs[0]];
+      if (!aOut) {
+        console.log(component.inputs[0]);
+        throw new Error("component not found");
+      }
       component.state =
         aOut === "x" ? "x" : logicFunctions[logicFn](aOut.state);
       return;

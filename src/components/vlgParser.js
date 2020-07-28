@@ -213,11 +213,11 @@ const gateParser = coroutine(function*() {
 // Assign parser ======================================================
 
 const operator = choice([
-  char("&").map(asType("OP_AND")),
-  char("|").map(asType("OP_OR")),
-  char("^").map(asType("OP_XOR")),
-  str("~&").map(asType("OP_NAND")),
-  str("~|").map(asType("OP_NOR"))
+  char("&").map(x => ({ type: "OP_AND", value: "and" })),
+  char("|").map(x => ({ type: "OP_OR", value: "or" })),
+  char("^").map(x => ({ type: "OP_XOR", value: "xor" })),
+  str("~&").map(x => ({ type: "OP_NAND", value: "nand" })),
+  str("~|").map(x => ({ type: "OP_NOR", value: "nor" }))
 ]);
 const variable = sequenceOf([
   possibly(char("~")),
@@ -342,7 +342,7 @@ const assignParser = coroutine(function*() {
   const value = yield squareBracketExpr.errorMap(
     lintError("Invalid expression")
   );
-  console.log("assignParser: ", id, value);
+  // console.log("assignParser: ", id, value);
   return { type: "assign", id, value };
 });
 
