@@ -9,18 +9,18 @@ sel a b | F
  1  0 0 | 0
  1  0 1 | 1
  1  1 0 | 0
- 1  1 1 | 1*/
+ 1  1 1 | 1
+ */
 
 module Mux2_1 (
 	input sel,
 	input a, b,
 	output F);
 
-	assign F = ((~sel & a) | (sel & b));
+	assign F = (~sel & a) | (sel & b);
 endmodule
 
 module main(output F);
-
   wire a, b, sel;
 
   control(a);
@@ -28,7 +28,6 @@ module main(output F);
   control(sel);
 
   Mux2_1 mux(.a(a), .b(b), .sel(sel), .F(F));
-
   buffer(F);
 
   test begin

@@ -217,6 +217,10 @@ const evaluate = (components, componentLookup) => {
         return;
       }
       const aOut = componentLookup[component.inputs[0]];
+      if (!aOut) {
+        console.log(component.inputs[0]);
+        throw new Error("component not found");
+      }
       component.state =
         aOut === "x" ? "x" : logicFunctions[logicFn](aOut.state);
       return;
@@ -283,8 +287,8 @@ export default {
       tab: "code",
       layout: "dagre",
       source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1 },
-      sourceTab: "OneHotDecoder",
-      openFiles: ["OneHotDecoder", "Mux2_1", "Scratch"],
+      sourceTab: "SevenSeg",
+      openFiles: ["OneHotDecoder", "Mux2_1", "Scratch", "SevenSeg"],
       errors: {}
     };
   },

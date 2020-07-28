@@ -40,6 +40,7 @@ export default {
   props: ["value"],
   data() {
     return {
+      parser: vlgParser,
       cmOptions: {
         viewportMargin: Infinity,
         tabSize: 2,
@@ -56,7 +57,7 @@ export default {
             cm.foldCode(cm.getCursor());
           }
         },
-        lint: { selfContain: true },
+        lint: { selfContain: true, getAnnotations: this.vlgValidator },
         autoCloseBrackets: true,
         matchBrackets: true,
         gutters: [
@@ -70,20 +71,41 @@ export default {
   },
 
   methods: {
-    onReady(cm) {
-      const parse = vlgParser(this.value);
-      const errors =
-        parse.lint.length == 0 && parse.isError ? 1 : parse.lint.length;
+    vlgValidator: function(text, updateLinting, options) {
+      if (text.length == 0) return [];
+      var errors = [];
+
+      const parse = this.parser(text);
+
+      var finder = lineColumn(text, { origin: 0 });
+
+      const addError = (error, index, severity) => {
+        var errorStart = finder.fromIndex(index);
+        var errorEnd = finder.fromIndex(
+          Math.max(text.regexIndexOf(/[\s\(\)\[\]\{\},=]/, index), index)
+        );
+        errors.push({
+          message: error,
+          severity,
+          from: CodeMirror.Pos(errorStart.line, errorStart.col),
+          to: CodeMirror.Pos(errorEnd.line, errorEnd.col)
+        });
+      };
+
+      parse.lint.forEach(x => addError(x.error, x.index, x.severity));
+      if (parse.parseState.isError) {
+        if (parse.lint.length == 0)
+          addError(parse.parseState.error, parse.parseState.index);
+      }
 
       this.$emit("parsed", errors);
+      return errors;
+    },
+    onReady(cm) {
+      // this.$emit("parsed", errors);
     },
     onChange(val) {
       this.$emit("input", val);
-      const parse = vlgParser(val);
-      const errors =
-        parse.lint.length == 0 && parse.isError ? 1 : parse.lint.length;
-
-      this.$emit("parsed", errors);
     }
   },
   computed: {
