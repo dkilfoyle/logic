@@ -29,7 +29,7 @@
                 ></trace-chart>
               </div>
               <div class="col-3">
-                <div class="text-caption">{{ g.globalid }}</div>
+                <!-- <div class="text-caption">{{ g.globalid }}</div> -->
                 <div class="text-caption">{{ g.instanceid }}</div>
               </div>
             </div></q-scroll-area

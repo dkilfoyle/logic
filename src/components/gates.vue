@@ -19,14 +19,14 @@
         </div>
         <q-scroll-area style="height:70vh">
           <div class="row q-pa-md">
-            <q-markup-table>
-              <thead>
-                <tr>
-                  <th>GlobalID</th>
+            <q-markup-table class="full-width">
+              <thead class="bg-teal">
+                <tr class="text-white">
+                  <th class="text-left">GlobalID</th>
                   <!-- <th>InstanceID</th> -->
-                  <th>Function</th>
-                  <th>Inputs</th>
-                  <th>State</th>
+                  <th class="text-left">Function</th>
+                  <th class="text-left">Inputs</th>
+                  <th class="text-right">State</th>
                 </tr>
               </thead>
 
@@ -36,7 +36,7 @@
                   <!-- <td>{{ g.instanceid }}</td> -->
                   <td>{{ getGate(g.globalid).logic }}</td>
                   <td>{{ getGate(g.globalid).inputs.join(", ") }}</td>
-                  <td>{{ getGate(g.globalid).state }}</td>
+                  <td class="text-right">{{ getGate(g.globalid).state }}</td>
                 </tr>
               </tbody>
             </q-markup-table>
