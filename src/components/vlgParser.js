@@ -32,8 +32,10 @@ import {
 
 var definedVariables = []; // global variable but for current module only
 var definedControls = [];
-
+var definedModules = [];
 var lint = [];
+var savePosition = 0;
+
 const lintError = (lintError, severity) => (error, index) => {
   lint.push({
     index,
@@ -42,6 +44,15 @@ const lintError = (lintError, severity) => (error, index) => {
   });
   return lintError;
 };
+
+const lintWhere = (state, where) => {
+  if (where.from) return where.from;
+  if (where.back) return state.index - where.back;
+  return state.index - where;
+};
+
+const lintWarningParser = (error, level, where) =>
+  tapParser(state => lintError(error, level)("", lintWhere(state, where)));
 
 const asType = type => x => ({ type, value: x });
 const last = a => a[a.length - 1];
@@ -78,16 +89,6 @@ const anyOfArray = strs => choice(strs.map(x => str(x)));
 
 // Token parsers ===============================================================
 
-// const UNARY_OPERATOR = choice([str("~")]);
-
-// const BINARY_OPERATOR = choice([
-//   str("&").map(x => "and"),
-//   str("|").map(x => "or"),
-//   str("^").map(x => "xor"),
-//   str("~&").map(x => "nand"),
-//   str("~|").map(x => "nor")
-// ]);
-
 const keywords = [
   "module",
   "begin",
@@ -122,68 +123,106 @@ const identifier = coroutine(function*() {
   return id.value;
 });
 
-const number = coroutine(function*() {
-  const bits = yield digits;
+const numberLiteral = coroutine(function*() {
+  const bits = yield digits.map(x => parseInt(bits));
   yield str("'");
-  const base = yield str("b"); //choice([str("b"), str("h", str("d"))]);
+  const base = yield choice([
+    str("b").map(x => 2),
+    str("h").map(x => 16),
+    str("d").map(x => 10)
+  ]);
   const value = yield digits;
-  return { type: "number", bits, base, value };
+  return { type: "number", bits, base, value: parseInt(value, base) };
 });
 
-const definedVariableParser = coroutine(function*() {
-  const variable = yield identifier; //.errorMap(lintError("Invalid identifier"));
+const bitLiteral = takeLeft(ws(binaryDigit))(
+  lookAhead(anythingExcept(digit))
+).map(x => ({ type: "number", bits: 1, base: 2, value: parseInt(x) }));
 
-  if (!definedVariables.some(x => x == variable)) {
-    yield tapParser(state =>
-      lintError("Undefined variable", "warning")(
-        "",
-        state.index - variable.length
-      )
-    );
+const definedVariable = coroutine(function*() {
+  const id = yield identifier; //.errorMap(lintError("Invalid identifier"));
+  const index = yield possibly(betweenSquareBrackets(digits));
+
+  const found = definedVariables.find(x => x.id == id);
+  if (!found)
+    yield lintWarningParser("undefined variable", "warning", id.length);
+
+  // check to see if dim is valid
+  if (index) {
+    if (found.dim == 1)
+      yield lintWarningParser(
+        "Variable is not a vector",
+        "warning",
+        name.length + 3
+      );
+    if (index > found.dim[0] || index < found.dim[1])
+      yield lintWarningParser(
+        "Array index is outside of bounds for this variable",
+        "warning",
+        id.length + 3
+      );
   }
-  return variable;
+
+  return { type: "variableInstance", id, index: index || 1 };
 });
 
-const debug = msg => x => {
-  console.log(msg + ":", x);
-  return x;
-};
+const definedControl = coroutine(function*() {
+  const id = yield identifier; //.errorMap(lintError("Invalid identifier"));
+  const index = yield possibly(betweenSquareBrackets(digits));
 
-const definedControlParser = coroutine(function*() {
-  const variable = yield identifier.errorMap(lintError("Invalid identifier"));
+  const found = definedControls.find(x => x.id.id == id); // x is a gate with an id which is a variable
+  if (!found)
+    yield lintWarningParser("undefined variable", "warning", id.length);
 
-  if (!definedControls.some(x => x == variable)) {
-    yield tapParser(state =>
-      lintError("Must be control variable", "warning")(
-        "",
-        state.index - variable.length
-      )
-    );
+  // check to see if dim is valid
+  if (index) {
+    if (found.dim == 1)
+      yield lintWarningParser(
+        "Variable is not a vector",
+        "warning",
+        id.length + 3
+      );
+    if (index > found.dim[1] || index < found.dim[0])
+      yield lintWarningParser(
+        "Array index is outside of bounds for this variable",
+        "warning",
+        id.length + 3
+      );
   }
-  return variable;
+
+  return { type: "variableInstance", id, index: index || 1 };
 });
 
 // Instance parsers =====================================================
 
-const variableParser = coroutine(function*() {
-  const id = yield definedVariableParser;
-  const index = yield possibly(betweenSquareBrackets(digits));
-  return { id, index };
+const instanceParamsParser = coroutine(function*() {
+  const port = yield sequenceOf([str("."), identifier]).map(x => x[1]);
+  const mapped = yield betweenRoundBrackets(definedVariable);
+  return { port, mapped };
 });
 
-const instanceParamsParser = coroutine(function*() {
-  const instanceVar = yield sequenceOf([str("."), identifier]).map(x => x[1]);
-  const moduleVar = yield betweenRoundBrackets(variableParser);
-  return { param: instanceVar, mapped: moduleVar };
-});
+const tapPosition = tapParser(state => (savePosition = state.index)).map(
+  x => savePosition
+);
 
 const instanceParser = coroutine(function*() {
+  yield optionalWhitespace;
+  const start = yield tapPosition;
   const module = yield ws(identifier).errorMap(x => "no module");
+  // let moduleEnd = 0;
+  // yield tapParser(res => (moduleEnd = res.index));
   const id = yield ws(identifier).errorMap(x => "no id");
   const params = yield betweenRoundBrackets(
     commaSeparated(ws(instanceParamsParser))
   );
   yield str(";");
+
+  const found = definedModules.find(x => x == module);
+  if (!found)
+    yield lintWarningParser("Module " + module + " not defined", "warning", {
+      from: start
+    });
+
   return { type: "instance", module, id, params };
 });
 
@@ -201,9 +240,7 @@ const gateParser = coroutine(function*() {
     str("buffer")
   ]);
 
-  const params = yield betweenRoundBrackets(
-    commaSeparated(definedVariableParser)
-  );
+  const params = yield betweenRoundBrackets(commaSeparated(definedVariable));
 
   yield ws(str(";"));
 
@@ -221,7 +258,7 @@ const operator = choice([
 ]);
 const variable = sequenceOf([
   possibly(char("~")),
-  definedVariableParser
+  definedVariable
 ]).map(([n, v]) => ({ type: "VARIABLE", value: v, invert: n != null }));
 
 const typifyBracketedExpression = expr => {
@@ -335,7 +372,7 @@ const squareBracketExpr = coroutine(function*() {
 
 const assignParser = coroutine(function*() {
   yield str("assign ");
-  const id = yield ws(identifier).errorMap(
+  const output = yield ws(definedVariable).errorMap(
     lintError("Invalid assign identifier")
   );
   yield ws(str("="));
@@ -343,7 +380,7 @@ const assignParser = coroutine(function*() {
     lintError("Invalid expression")
   );
   // console.log("assignParser: ", id, value);
-  return { type: "assign", id, value };
+  return { type: "assign", output, value };
 });
 
 // MODULE =============================================================
@@ -351,7 +388,7 @@ const assignParser = coroutine(function*() {
 const arrayDimParser = coroutine(function*() {
   const dim = yield betweenSquareBrackets(
     sequenceOf([digits, str(":"), digits])
-  ).map(x => [x[0], x[2]]);
+  ).map(x => [parseInt(x[0]), parseInt(x[2])]);
   return dim;
 });
 
@@ -363,22 +400,33 @@ const listOfIds = sequenceOf([
   .errorMap(lintError("Invalid port identifier"));
 
 const portParser = coroutine(function*() {
-  const type = yield choice([ws(str("input")), ws(str("output"))]).errorMap(
+  const varType = yield choice([ws(str("input")), ws(str("output"))]).errorMap(
     lintError("Invalid port type: must be 'input' or 'output'")
   );
-  const arrayDim = yield possibly(arrayDimParser);
-  const ids = yield listOfIds.errorMap(debug("Invalid port identifier33333"));
-  return ids.map(x => ({ type, dim: arrayDim, id: x }));
+  const dim = yield possibly(ws(arrayDimParser));
+  const ids = yield listOfIds.errorMap(lintError("Invalid port identifier"));
+  return ids.map(x => ({
+    type: "variableDeclaration",
+    varType,
+    id: x,
+    dim: dim || 1
+  }));
   // return { type, dim: arrayDim, id: ids[0] };
 });
 
 const wireParser = coroutine(function*() {
   yield str("wire ");
-  const vars = yield commaSeparated(
+  const dim = yield possibly(ws(arrayDimParser));
+  const ids = yield commaSeparated(
     ws(identifier).errorMap(lintError("Invalid wire identifier"))
   );
   yield ws(str(";"));
-  return vars;
+  return ids.map(x => ({
+    type: "variableDeclaration",
+    varType: "wire",
+    id: x,
+    dim: dim || 1
+  }));
 });
 
 const moduleParser = coroutine(function*() {
@@ -399,10 +447,10 @@ const moduleParser = coroutine(function*() {
   yield ws(str(";"));
 
   var wires = yield possibly(ws(wireParser));
-  wires = wires ? wires : [];
+  wires = wires || [];
 
   // global
-  definedVariables = [...ports.map(x => x.id), ...wires];
+  definedVariables = [...ports, ...wires];
   definedControls = [];
 
   // TODO: check for undefined variables modules and add these to lint
@@ -416,7 +464,7 @@ const moduleParser = coroutine(function*() {
   );
 
   statements.forEach(x => {
-    if (x.gate == "control") definedControls.push(x.id);
+    if (x.gate == "control") definedControls.push(x);
   });
 
   var clock;
@@ -428,21 +476,20 @@ const moduleParser = coroutine(function*() {
   var module = { type: "module", id, ports: ports.flat(), wires, statements };
   if (clock) module.clock = clock;
   // console.log(module);
+
+  definedModules.push(id);
   return module;
 });
 
 // Test sections parsers ================================================
 
 const testAssignmentParser = coroutine(function*() {
-  const id = yield ws(definedControlParser);
+  const variable = yield ws(definedControl);
   yield str("=");
-  const value = yield sequenceOf([
-    ws(binaryDigit),
-    lookAhead(anythingExcept(binaryDigit))
-  ])
-    .map(x => x[0])
-    .errorMap(lintError("Expected 0 or 1"));
-  return { id, value: parseInt(value, 10) };
+  const number = yield choice([numberLiteral, bitLiteral]).errorMap(
+    lintError("Expected 0 or 1 or number")
+  );
+  return { variable, value: parseInt(number.value, 10) };
 });
 
 const testTimeParser = coroutine(function*() {
@@ -468,9 +515,11 @@ const testParser = coroutine(function*() {
 
 const vlgParser = code => {
   lint = [];
-  const parseState = sequenceOf([many1(ws(moduleParser)), endOfInput])
-    .map(x => x[0]) // don't include the endofinput in result
-    .run(code);
+  definedModules = [];
+
+  const parseState = takeLeft(
+    many1(ws(moduleParser.errorMap(lintError("Invalid module"))))
+  )(endOfInput).run(code);
   return {
     parseState,
     lint

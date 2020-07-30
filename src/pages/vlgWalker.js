@@ -1,4 +1,9 @@
+import state from "src/store/module-example/state";
+
 var modules, instances, gates;
+
+// const log = d => ({ ...d });
+const log = d => JSON.parse(JSON.stringify(d));
 
 const createInstance = (outputNamespace, instance) => {
   // instance of main will have empty outputNamespace
@@ -6,13 +11,20 @@ const createInstance = (outputNamespace, instance) => {
 
   const instanceModule = modules[instance.module];
 
+  console.log(
+    `createInstance: ${instance.id} of ${instance.module} in ${outputNamespace} namespace`
+  );
+  console.log(`-- Instance`, log(instance));
+  console.log(`-- Module`, log(instanceModule));
+
   const varMap = instance.params.reduce((acc, param) => {
-    acc[param.param] = {
+    acc[param.port] = {
       globalid: outputNamespace + param.mapped.id,
       type: "port",
-      moduleid: param.param,
-      instanceid: outputNamespace + instance.id + "." + param.param,
-      porttype: instanceModule.ports.find(x => x.id == param.param).type
+      index: param.mapped.index,
+      moduleid: param.port,
+      instanceid: outputNamespace + instance.id + "." + param.port,
+      porttype: instanceModule.ports.find(x => x.id == param.port).varType
     };
     return acc;
   }, {});
@@ -27,32 +39,35 @@ const createInstance = (outputNamespace, instance) => {
     return varMap[wireLocalID].globalid;
   };
 
-  instanceModule.wires.forEach(addWire);
+  instanceModule.wires.forEach(x => addWire(x.id));
+
+  console.log("-- varMap: ", varMap);
 
   // create all the gates first because instance processes needs to refer back to gates
   const addGate = gate => {
-    // console.log(gate);
+    console.log("-- Adding gate: ", log(gate), log(varMap));
     gates.push({
-      id: varMap[gate.id].instanceid,
+      id: varMap[gate.id.id].instanceid,
       logic: gate.gate,
-      inputs: gate.params.map(param => varMap[param].globalid),
+      inputs: gate.params.map(param => varMap[param.id].globalid),
       instance: outputNamespace + instance.id,
       state: 0
     });
-    return varMap[gate.id].moduleid;
+    return varMap[gate.id.id].moduleid;
   };
 
   instanceModule.statements.filter(x => x.type == "gate").forEach(addGate);
+  console.log("-- gates: ", gates);
 
   const evaluateAssignNode = (node, output) => {
-    // console.log(`output: ${output}, Type: ${node.type}`);
+    console.log(`output: ${output}, Type: ${node.type}`);
     let lastOutput;
     if (
       node.type == "BRACKETED_EXPRESSION" ||
       node.type == "ASSIGN_EXPRESSION"
     ) {
       let expr = node.value;
-      // console.log(" -- " + expr.map(x => x.type + ":" + x.value).join(", "));
+      console.log(" -- " + expr.map(x => x.type + ":" + x.value.id).join(", "));
 
       // for each operation triplet
       for (let i = 1; i < expr.length; i += 2) {
@@ -60,7 +75,7 @@ const createInstance = (outputNamespace, instance) => {
         if (!varMap[curOutput]) addWire(curOutput);
         lastOutput = addGate({
           id: curOutput,
-          gate: expr[i].value,
+          gate: expr[i].value.id,
           params: [
             i == 1
               ? evaluateAssignNode(expr[i - 1], output + "op" + (i - 1))
@@ -73,7 +88,7 @@ const createInstance = (outputNamespace, instance) => {
     }
 
     if (node.type == "VARIABLE") {
-      lastOutput = node.value;
+      lastOutput = node.value.id;
       if (node.invert) {
         // prepare an inverter gate to pipe the node output
         if (!varMap["not" + lastOutput]) {
@@ -100,7 +115,7 @@ const createInstance = (outputNamespace, instance) => {
   instanceModule.statements
     .filter(x => x.type == "assign")
     .forEach(statement => {
-      return evaluateAssignNode(statement.value, statement.id);
+      return evaluateAssignNode(statement.value, statement.output.id);
     });
 
   var newInstance = {
@@ -153,8 +168,8 @@ const walk = ast => {
   // create an instance of main module
   const mainInstance = {
     params: modules.main.ports.map(p => ({
-      param: p.id,
-      mapped: { id: "main." + p.id }
+      port: p.id,
+      mapped: { type: "variableInstance", id: "main." + p.id, index: 1 }
     })),
     id: "main",
     module: "main"

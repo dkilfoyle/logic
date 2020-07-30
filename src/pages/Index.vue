@@ -260,6 +260,7 @@ import Scratch from "../statics/files/scratch.vlg";
 import OneHotDecoder from "../statics/files/onehotdecoder.vlg";
 import SevenSeg from "../statics/files/7seg.vlg";
 import Mux2_1 from "../statics/files/mux.vlg";
+import Mux4 from "../statics/files/mux4.vlg";
 
 import Vue from "vue";
 
@@ -286,9 +287,9 @@ export default {
       },
       tab: "code",
       layout: "dagre",
-      source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1 },
-      sourceTab: "Mux2_1",
-      openFiles: ["Scratch", "OneHotDecoder", "SevenSeg", "Mux2_1"],
+      source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1, Mux4 },
+      sourceTab: "OneHotDecoder", //"Mux4",
+      openFiles: ["Scratch", "OneHotDecoder", "SevenSeg", "Mux2_1", "Mux4"],
       errors: {}
     };
   },

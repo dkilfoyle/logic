@@ -12,10 +12,10 @@ module Mux4_1 (
   input a, b, c, d
   output F);
 
-	assign F = (
-        (((a & ~sel[0]) & ~sel[1]) | ((b & ~sel[0]) &  sel[1])) |
-        (((c &  sel[0]) & ~sel[1]) | ((d &  sel[0]) &  sel[1]))
-  )
+	assign F = (a & ~sel[0] & ~sel[1]) | 
+             (b & ~sel[0] &  sel[1]) |
+             (c &  sel[0] & ~sel[1]) |
+             (d &  sel[0] &  sel[1]) ;
 endmodule
 
 module main(output F);
@@ -29,7 +29,7 @@ module main(output F);
   control(d);
   control(sel);
 
-  Mux2_1 mux(.a(a), .b(b), .sel(sel), .F(F));
+  Mux2_1 mux(.a(a), .b(b), .c(c), .d(d), .sel(sel), .F(F));
 
   buffer(F);
 
