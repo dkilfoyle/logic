@@ -128,7 +128,7 @@ export default {
             type: "circle",
             icon: {
               show: true,
-              img: "statics/" + x.logic + ".svg"
+              img: "" + x.logic + ".svg"
             },
             comboId: x.instance
           })),
