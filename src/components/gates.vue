@@ -17,29 +17,31 @@
           <q-radio v-model="showWhichGates" val="all" label="All" />
           <q-radio v-model="showWhichGates" val="outputs" label="Outputs" />
         </div>
-        <div class="row">
-          <q-markup-table>
-            <thead>
-              <tr>
-                <th>GlobalID</th>
-                <th>InstanceID</th>
-                <th>Function</th>
-                <th>Inputs</th>
-                <th>State</th>
-              </tr>
-            </thead>
+        <q-scroll-area style="height:70vh">
+          <div class="row q-pa-md">
+            <q-markup-table>
+              <thead>
+                <tr>
+                  <th>GlobalID</th>
+                  <!-- <th>InstanceID</th> -->
+                  <th>Function</th>
+                  <th>Inputs</th>
+                  <th>State</th>
+                </tr>
+              </thead>
 
-            <tbody>
-              <tr v-for="g in selectedGates" :key="g.globalid">
-                <td>{{ g.globalid }}</td>
-                <td>{{ g.instanceid }}</td>
-                <td>{{ getGate(g.globalid).logic }}</td>
-                <td>{{ getGate(g.globalid).inputs.join(", ") }}</td>
-                <td>{{ getGate(g.globalid).state }}</td>
-              </tr>
-            </tbody>
-          </q-markup-table>
-        </div>
+              <tbody>
+                <tr v-for="g in selectedGates" :key="g.globalid">
+                  <td>{{ g.globalid }}</td>
+                  <!-- <td>{{ g.instanceid }}</td> -->
+                  <td>{{ getGate(g.globalid).logic }}</td>
+                  <td>{{ getGate(g.globalid).inputs.join(", ") }}</td>
+                  <td>{{ getGate(g.globalid).state }}</td>
+                </tr>
+              </tbody>
+            </q-markup-table>
+          </div></q-scroll-area
+        >
       </div>
     </div>
   </div>
