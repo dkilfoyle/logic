@@ -254,12 +254,12 @@ const evaluate = (components, componentLookup) => {
   });
 };
 
-import BitAdder from "../statics/files/1bitadder.vlg";
-import DFF from "../statics/files/dff.vlg";
-import Scratch from "../statics/files/scratch.vlg";
-import OneHotDecoder from "../statics/files/onehotdecoder.vlg";
-import SevenSeg from "../statics/files/7seg.vlg";
-import Mux2_1 from "../statics/files/mux.vlg";
+import BitAdder from "../files/1bitadder.vlg";
+import DFF from "../files/dff.vlg";
+import Scratch from "../files/scratch.vlg";
+import OneHotDecoder from "../files/onehotdecoder.vlg";
+import SevenSeg from "../files/7seg.vlg";
+import Mux2_1 from "../files/mux.vlg";
 
 import Vue from "vue";
 

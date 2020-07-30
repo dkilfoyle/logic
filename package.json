@@ -3,8 +3,6 @@
   "version": "0.0.1",
   "description": "Logic Circuit Simulator",
   "productName": "Logic Sim",
-  "cordovaId": "org.cordova.quasar.app",
-  "capacitorId": "",
   "author": "",
   "private": true,
   "scripts": {
@@ -18,6 +16,7 @@
     "arcsecond": "^2.0.4",
     "chalk": "^4.1.0",
     "chart.js": "^2.9.3",
+    "core-js": "^3.0.0",
     "gh-pages": "^3.1.0",
     "line-column": "^1.0.2",
     "push-dir": "^0.4.1",
@@ -29,7 +28,7 @@
     "xterm-addon-fit": "^0.4.0"
   },
   "devDependencies": {
-    "@quasar/app": "^1.9.6",
+    "@quasar/app": "^2.0.0",
     "babel-eslint": "^10.0.1",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.9.0",
@@ -42,9 +41,14 @@
     "yarn": ">= 1.21.1"
   },
   "browserslist": [
-    "last 1 version, not dead, ie >= 11"
-  ],
-  "resolutions": {
-    "@babel/parser": "7.7.5"
-  }
+    "last 10 Chrome versions",
+    "last 10 Firefox versions",
+    "last 4 Edge versions",
+    "last 7 Safari versions",
+    "last 8 Android versions",
+    "last 8 ChromeAndroid versions",
+    "last 8 FirefoxAndroid versions",
+    "last 10 iOS versions",
+    "last 5 Opera versions"
+  ]
 }

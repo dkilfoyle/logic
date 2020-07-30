@@ -17,7 +17,7 @@
             ><q-btn
               flat
               color="secondary"
-              icon="img:statics/icons/GitHub-Mark-32px.png"
+              icon="img:icons/GitHub-Mark-32px.png"
             ></q-btn
           ></a>
         </div>
