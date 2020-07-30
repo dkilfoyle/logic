@@ -32,8 +32,10 @@ import {
 
 var definedVariables = []; // global variable but for current module only
 var definedControls = [];
-
+var definedModules = [];
+var savePosition = 0;
 var lint = [];
+
 const lintError = (lintError, severity) => (error, index) => {
   lint.push({
     index,
@@ -42,6 +44,19 @@ const lintError = (lintError, severity) => (error, index) => {
   });
   return lintError;
 };
+
+const lintWhere = (state, where) => {
+  if (where.from) return where.from;
+  if (where.back) return state.index - where.back;
+  return state.index - where;
+};
+
+const lintWarningParser = (error, level, where) =>
+  tapParser(state => lintError(error, level)("", lintWhere(state, where)));
+
+const tapPosition = tapParser(state => (savePosition = state.index)).map(
+  x => savePosition
+);
 
 const asType = type => x => ({ type, value: x });
 const last = a => a[a.length - 1];
@@ -178,12 +193,19 @@ const instanceParamsParser = coroutine(function*() {
 });
 
 const instanceParser = coroutine(function*() {
+  yield optionalWhitespace;
+  const start = yield tapPosition;
   const module = yield ws(identifier).errorMap(x => "no module");
   const id = yield ws(identifier).errorMap(x => "no id");
   const params = yield betweenRoundBrackets(
     commaSeparated(ws(instanceParamsParser))
   );
   yield str(";");
+  const found = definedModules.find(x => x == module);
+  if (!found)
+    yield lintWarningParser("Module " + module + " not defined", "warning", {
+      from: start
+    });
   return { type: "instance", module, id, params };
 });
 
@@ -428,6 +450,8 @@ const moduleParser = coroutine(function*() {
   var module = { type: "module", id, ports: ports.flat(), wires, statements };
   if (clock) module.clock = clock;
   // console.log(module);
+
+  definedModules.push(id);
   return module;
 });
 
