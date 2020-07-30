@@ -20,18 +20,20 @@
         </div>
 
         <div v-if="selectedInstance">
-          <div class="row" v-for="g in selectedGates" :key="g.globalid">
-            <div class="col-9">
-              <trace-chart
-                :chart-data="tracedata(g.globalid)"
-                :options="traceoptions"
-              ></trace-chart>
-            </div>
-            <div class="col-3">
-              <div class="text-caption">{{ g.globalid }}</div>
-              <div class="text-caption">{{ g.instanceid }}</div>
-            </div>
-          </div>
+          <q-scroll-area style="height:70vh">
+            <div class="row" v-for="g in selectedGates" :key="g.globalid">
+              <div class="col-9">
+                <trace-chart
+                  :chart-data="tracedata(g.globalid)"
+                  :options="traceoptions"
+                ></trace-chart>
+              </div>
+              <div class="col-3">
+                <div class="text-caption">{{ g.globalid }}</div>
+                <div class="text-caption">{{ g.instanceid }}</div>
+              </div>
+            </div></q-scroll-area
+          >
         </div>
       </div>
     </div>

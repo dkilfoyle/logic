@@ -6,7 +6,7 @@ export default {
   mixins: [reactiveProp],
   props: {
     options: { type: Object, default: null },
-    height: { type: String, default: "100px" }
+    height: { type: String, default: "60px" }
   },
   mounted() {
     // this.chartData is created in the mixin.
