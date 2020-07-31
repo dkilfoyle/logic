@@ -3,20 +3,28 @@
     <div class="q-pa-md row items-start q-gutter-md justify-center">
       <div class="col">
         <q-tabs inline-label v-model="tab">
-          <q-tab name="code" label="Code"></q-tab>
+          <q-tab
+            name="code"
+            label="Code"
+            icon="functions"
+            class="text-purple"
+          ></q-tab>
           <q-tab
             name="gates"
             label="Gates"
+            icon="toc"
             :disable="!compiled.gates.length"
           ></q-tab>
           <q-tab
             name="trace"
+            icon="timeline"
             label="Trace"
-            :disable="!compiled.simulation"
+            :disable="!compiled.gates.length"
           ></q-tab>
           <q-tab
             name="graph"
             label="Schematic"
+            icon="electrical_services"
             :disable="!compiled.gates.length"
           ></q-tab>
         </q-tabs>
