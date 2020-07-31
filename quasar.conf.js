@@ -82,7 +82,7 @@ module.exports = function(/* ctx */) {
           }
         });
         cfg.module.rules.push({
-          test: /\.vlg$/i,
+          test: /\.v$/i,
           use: "raw-loader"
         });
       }

@@ -254,12 +254,13 @@ const evaluate = (components, componentLookup) => {
   });
 };
 
-import BitAdder from "../files/1bitadder.vlg";
-import DFF from "../files/dff.vlg";
-import Scratch from "../files/scratch.vlg";
-import OneHotDecoder from "../files/onehotdecoder.vlg";
-import SevenSeg from "../files/7seg.vlg";
-import Mux2_1 from "../files/mux.vlg";
+import BitAdder from "../files/1bitadder.v";
+import DFF from "../files/dff.v";
+import Scratch from "../files/scratch.v";
+import OneHotDecoder from "../files/onehotdecoder.v";
+import SevenSeg from "../files/7seg.v";
+import Mux2_1 from "../files/mux.v";
+import DeMux from "../files/demux.v";
 
 import Vue from "vue";
 
@@ -286,9 +287,17 @@ export default {
       },
       tab: "code",
       layout: "dagre",
-      source: { BitAdder, DFF, Scratch, OneHotDecoder, SevenSeg, Mux2_1 },
+      source: {
+        BitAdder,
+        DFF,
+        Scratch,
+        OneHotDecoder,
+        SevenSeg,
+        Mux2_1,
+        DeMux
+      },
       sourceTab: "Mux2_1",
-      openFiles: ["Scratch", "OneHotDecoder", "SevenSeg", "Mux2_1"],
+      openFiles: ["Scratch", "OneHotDecoder", "SevenSeg", "Mux2_1", "DeMux"],
       errors: {}
     };
   },
