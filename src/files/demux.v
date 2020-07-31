@@ -1,44 +1,34 @@
-/* 2 to 1 Multiplexer
-Sel selects which input to pass to output
-sel a b | F
- 0  0 0 | 0 
- 0  0 1 | 0 
- 0  1 0 | 1 
- 0  1 1 | 1 
------------ 
- 1  0 0 | 0
- 1  0 1 | 1
- 1  1 0 | 0
- 1  1 1 | 1
+/* 1 to 2 DeMultiplexer
+Sel selects which output to send the input to
+sel a | Y Z
+ 0  0 | 0 0 
+ 0  1 | 1 0 
+ 1  0 | 0 0 
+ 1  1 | 0 1 
  */
 
-module Mux2_1 (
+module DeMux (
 	input sel,
-	input a, b,
-	output F);
+	input a,
+	output Y, Z);
 
-	assign F = (~sel & a) | (sel & b);
+	assign Y = ~sel & a;
+  assign Z = sel & a;
 endmodule
 
-module main(output F);
-  wire a, b, sel;
+module main(output Y, Z);
+  wire clock, sel;
 
-  control(a);
-  control(b);
   control(sel);
+  control(clock); // "clock" is controlled automatically during test
 
-  Mux2_1 mux(.a(a), .b(b), .sel(sel), .F(F));
-  buffer(F);
+  DeMux demux(.a(clock), .sel(sel), .Y(Y), .Z(Z));
+  buffer(Y);
+  buffer(Z);
 
   test begin
-    #01 {sel=0, a=0, b=0}; // expect 0 
-    #02 {sel=0, a=0, b=1}; // expect 0 
-    #03 {sel=0, a=1, b=0}; // expect 1 
-    #04 {sel=0, a=1, b=1}; // expect 1 
-    #05 {sel=1, a=0, b=0}; // expect 0
-    #06 {sel=1, a=0, b=1}; // expect 1
-    #07 {sel=1, a=1, b=0}; // expect 0
-    #08 {sel=1, a=1, b=1}; // expect 1
-    #09;
+    #01 {sel=0};  
+    #010 {sel=1}; 
+    #020;
   end
 endmodule
