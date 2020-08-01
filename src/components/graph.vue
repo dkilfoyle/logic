@@ -70,14 +70,15 @@ export default {
       graph: null,
       layout: "dagre",
       showNodeLabels: false,
-      linkDistance: 150
+      linkDistance: 150,
+      time: 0
     };
   },
   watch: {
     graphData: function(val) {
       console.log("graphData Watch");
-      this.graph.data(val);
-      this.graph.render();
+      // this.graph.data(val);
+      this.graph.changeData(val);
     },
     graphConfig: function(val) {
       console.log("graphConfig Watch");
@@ -125,6 +126,16 @@ export default {
               ? x.id.substring(x.id.lastIndexOf(".") + 1)
               : null,
             description: x.id,
+            style:
+              x.state == 1
+                ? {
+                    stroke: "orangered",
+                    fill: "lightsalmon"
+                  }
+                : {
+                    stroke: "royalblue",
+                    fill: "skyblue"
+                  },
             type: "circle",
             icon: {
               show: true,
@@ -162,6 +173,7 @@ export default {
     }
   },
   mounted() {
+    console.log("mounted");
     this.graph = new G6.Graph({
       container: this.$refs.graph,
       width: 700,
@@ -171,6 +183,11 @@ export default {
       fitViewPadding: 20,
       // renderer: "svg",
       layout: this.graphConfig.layout,
+      animate: true, // Boolean, whether to activate the animation when global changes happen
+      animateCfg: {
+        duration: 500, // Number, the duration of one animation
+        easing: "easeLinear" // String, the easing function
+      },
       defaultNode: {
         type: "circle",
         size: 30,
@@ -275,6 +292,13 @@ export default {
         ]
       }
     });
+    this.graph.on("node:click", ev => {
+      const shape = ev.target;
+      const node = ev.item;
+      // console.log(ev);
+      // console.log(node._cfg.id);
+      this.$emit("nodeClick", node._cfg.id, this.time);
+    });
     this.graph.on("node:mouseenter", ev => {
       // set all edges to inactive
       var edges = this.graph.getEdges();
@@ -321,6 +345,7 @@ export default {
       edges = node.getEdges();
       edges.forEach(edge => this.graph.setItemState(edge, "running", false));
     });
+    this.redraw();
   }
 };
 </script>

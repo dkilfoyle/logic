@@ -11,7 +11,7 @@
     "deploy": "gh-pages -d dist/spa"
   },
   "dependencies": {
-    "@antv/g6": "^3.5.10",
+    "@antv/g6": "^3.6.0",
     "@quasar/extras": "^1.9.0",
     "arcsecond": "^2.0.4",
     "chalk": "^4.1.0",

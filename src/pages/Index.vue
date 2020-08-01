@@ -155,6 +155,7 @@
           ></q-tab-panel>
           <q-tab-panel name="graph" key="graph"
             ><graph
+              @nodeClick="onNodeClick"
               :file="compiled.sourceFile"
               :gates="compiled.gates"
               :instances="compiled.instances"
@@ -282,6 +283,7 @@ export default {
   },
   data() {
     return {
+      EVALS_PER_STEP: 5,
       terminal: {},
       showTerminal: true,
       fitAddon: {},
@@ -339,6 +341,7 @@ export default {
       this.terminal.write(str + "\n\r");
       this.terminal.scrollToBottom();
     },
+
     compile() {
       this.showTerminal = true;
       this.compiled.sourceFile = this.sourceTab;
@@ -390,6 +393,18 @@ export default {
         chalk.green.inverse(" DONE ") + "  Compiled successfully"
       );
     },
+    onNodeClick(nodeid, clock) {
+      // the user clicked a node in the graph, if it is a control node toggle its value and re-run the simulation
+      console.log("onNodeClick", nodeid, clock);
+      const foundNode = this.compiled.gates.find(g => g.id == nodeid);
+      if (foundNode && foundNode.logic == "control") {
+        foundNode.state = ~foundNode.state & 1;
+        var gatesLookup = indexBy(this.compiled.gates, "id");
+        for (let i = 0; i < this.EVALS_PER_STEP; i++) {
+          evaluate(this.compiled.gates, gatesLookup);
+        }
+      }
+    },
     simulate() {
       this.showTerminal = true;
       this.termWriteln(
@@ -397,9 +412,9 @@ export default {
           chalk.yellow(this.compiled.sourceFile)
       );
 
-      const EVALS_PER_STEP = 5;
       this.compiled.simulation = {};
       this.compiled.gates.forEach(g => {
+        g.state = 0;
         this.compiled.simulation[g.id] = [];
       });
 
@@ -430,7 +445,7 @@ export default {
           gatesLookup["main.clock"].state =
             ~gatesLookup["main.clock"].state & 1;
 
-        for (let i = 0; i < EVALS_PER_STEP; i++) {
+        for (let i = 0; i < this.EVALS_PER_STEP; i++) {
           evaluate(this.compiled.gates, gatesLookup);
         }
         this.compiled.gates.forEach(g => {
