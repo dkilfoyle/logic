@@ -28,6 +28,7 @@ G6.registerEdge(
   "can-running",
   {
     setState(name, value, item) {
+      // console.log("can-cunning: setState: ", name, value);
       const shape = item.get("keyShape");
       if (name === "running") {
         if (value) {
@@ -54,6 +55,13 @@ G6.registerEdge(
           shape.stopAnimate();
           shape.attr("lineDash", null);
         }
+      } else {
+        // for other states call the cubic-horizontal edge that we are extending
+        item
+          .get("shapeFactory")
+          .getShape("cubic-horizontal")
+          .setState(name, value, item);
+        // shape.setState(name, value, item);
       }
     }
   },
@@ -79,6 +87,7 @@ export default {
       console.log("graphData Watch");
       // this.graph.data(val);
       this.graph.changeData(val);
+      this.updateLogicStates();
     },
     graphConfig: function(val) {
       console.log("graphConfig Watch");
@@ -87,9 +96,21 @@ export default {
   },
   methods: {
     redraw: function() {
-      console.log("redraw");
+      // console.log("redraw");
       this.graph.data(this.graphData);
       this.graph.render();
+      this.updateLogicStates();
+    },
+    updateLogicStates: function() {
+      this.gates.forEach(gate => {
+        const node = this.graph.findById(gate.id);
+        node.setState("logic", gate.state == 1 ? "on" : "off");
+        node
+          .getEdges()
+          .forEach(edge =>
+            edge.setState("logic", gate.state == 1 ? "on" : "off")
+          );
+      });
     }
   },
   computed: {
@@ -120,36 +141,39 @@ export default {
     graphData: function() {
       if (this.gates) {
         const graphData = {
-          nodes: this.gates.map(x => ({
-            id: x.id,
-            label: this.showNodeLabels
-              ? x.id.substring(x.id.lastIndexOf(".") + 1)
-              : null,
-            description: x.id,
-            style:
-              x.state == 1
-                ? {
-                    stroke: "orangered",
-                    fill: "lightsalmon"
-                  }
-                : {
-                    stroke: "royalblue",
-                    fill: "skyblue"
-                  },
-            type: "circle",
-            icon: {
-              show: true,
-              img: "" + x.logic + ".svg"
-            },
-            comboId: x.instance
-          })),
+          nodes: this.gates.map(x => {
+            const graphNode = {
+              id: x.id,
+              label: this.showNodeLabels
+                ? x.id.substring(x.id.lastIndexOf(".") + 1)
+                : null,
+              description: x.id,
+              icon: {
+                show: true,
+                img: "" + x.logic + ".svg"
+              },
+              comboId: x.instance
+              // logicState: x.state
+            };
+            if (x.logic == "buffer" || x.logic == "control") {
+              (graphNode.anchorPoints = [
+                [0, 0.5],
+                [1, 0.5]
+              ]),
+                (graphNode.sourceAnchor = 0);
+              graphNode.targetAnchor = 1;
+            }
+            return graphNode;
+          }),
           edges: this.gates
             .map(gate => {
               if (gate.inputs) {
-                return gate.inputs.map(input => ({
-                  source: input,
-                  target: gate.id
-                }));
+                return gate.inputs.map(input => {
+                  return {
+                    source: input,
+                    target: gate.id
+                  };
+                });
               } else return null;
             })
             .flat()
@@ -166,6 +190,7 @@ export default {
             return x;
           })
         };
+
         console.log("graphData Computed: ", graphData);
         return graphData;
       }
@@ -173,14 +198,14 @@ export default {
     }
   },
   mounted() {
-    console.log("mounted");
+    // console.log("mounted");
     this.graph = new G6.Graph({
       container: this.$refs.graph,
       width: 700,
-      height: 600,
+      height: 700,
       groupByTypes: false,
       fitView: true,
-      fitViewPadding: 20,
+      fitViewPadding: 40,
       // renderer: "svg",
       layout: this.graphConfig.layout,
       animate: true, // Boolean, whether to activate the animation when global changes happen
@@ -191,56 +216,49 @@ export default {
       defaultNode: {
         type: "circle",
         size: 30,
-        style: {
-          // fill: "#bae637",
-          // stroke: "#eaff8f",
-          // lineWidth: 5
-        },
         linkPoints: {
           top: false,
           bottom: false,
           left: false,
-          right: true,
+          right: false,
           fill: "#fff",
           size: 5
         },
         anchorPoints: [
           [0, 0.25],
           [0, 0.75],
-          [0, 0.5],
-          [1, 0.25],
-          [1, 0.75],
+          // [0, 0.5],
+          // [1, 0.25],
+          // [1, 0.75],
           [1, 0.5]
         ],
-        sourceAnchor: 3,
+        sourceAnchor: 2, //3,
         targetAnchor: 0,
-        // clipCfg: {
-        //   show: true,
-        //   type: "circle",
-        //   r: 25
-        // },
         labelCfg: {
           style: {
             fill: "#1890ff",
             fontSize: 6
           },
           position: "bottom"
+        },
+        style: {
+          opacity: 1,
+          lineWidth: 1,
+          stroke: "#999"
         }
       },
       defaultEdge: {
         type: "can-running",
-        // type: "polyline",
-        // configure the bending radius and min distance to the end nodes
         style: {
-          // radius: 5,
-          // offset: 30,
           endArrow: {
-            path: G6.Arrow.triangle(3, 3),
-            d: 0 // offset
+            path: G6.Arrow.triangle(4, 4, 0),
+            d: 0,
+            fill: "#999"
           },
           startArrow: false,
+          opacity: 1,
+          lineWidth: 1,
           stroke: "#999"
-          // stroke: "#F6BD16"
         }
       },
       defaultCombo: {
@@ -255,23 +273,47 @@ export default {
         targetAnchor: 0
       },
       nodeStateStyles: {
-        active: {
+        "hover:connected": {
           opacity: 1
         },
-        inactive: {
-          opacity: 0.4
+        "hover:notconnected": {
+          opacity: 0.6
+        },
+        "hover:nothovering": {
+          opacity: 1
+        },
+        selected: {},
+        "logic:on": {
+          stroke: "orangered",
+          fill: "lightsalmon"
+        },
+        "logic:off": {
+          stroke: "royalblue",
+          fill: "skyblue"
         }
       },
       edgeStateStyles: {
-        active: {
-          stroke: "#F6BD16",
-          lineWidth: 3,
+        "hover:connected": {
+          opacity: 1,
+          lineWidth: 2
+        },
+        "hover:notconnected": {
+          opacity: 0.2
+        },
+        "hover:nothovering": {
           opacity: 1
         },
-        inactive: {
-          opacity: 0.4,
-          stroke: "#999",
-          lineWidth: 1
+        "logic:on": {
+          stroke: "orangered",
+          endArrow: {
+            path: G6.Arrow.triangle(4, 4, 0),
+            d: 5,
+            fill: "orangered"
+          }
+        },
+        "logic:off": {
+          stroke: "royalblue",
+          endArrow: { fill: "royalblue" }
         }
       },
       modes: {
@@ -295,56 +337,42 @@ export default {
     this.graph.on("node:click", ev => {
       const shape = ev.target;
       const node = ev.item;
-      // console.log(ev);
-      // console.log(node._cfg.id);
-      this.$emit("nodeClick", node._cfg.id, this.time);
+      this.$emit("nodeClick", node.get("id"), this.time);
+      const saveState = node.hasState("selected");
+      node.setState("selected", !saveState);
     });
     this.graph.on("node:mouseenter", ev => {
-      // set all edges to inactive
-      var edges = this.graph.getEdges();
-      edges.forEach(edge => {
-        edge.update({
-          style: {
-            opacity: 0.3
-          }
-        });
-      });
-      // now set edges connected to this node to active style and then change state to running
+      // set all edges and nodes to inactive
+      var edges = this.graph
+        .getEdges()
+        .forEach(edge => edge.setState("hover", "notconnected"));
+      var edges = this.graph
+        .getNodes()
+        .forEach(node => node.setState("hover", "notconnected"));
+      // now set edges connected to this node to active and running
       const node = ev.item;
       edges = node.getEdges();
       edges.forEach(edge => {
-        edge.update({
-          style: {
-            opacity: 1,
-            lineWidth: 2,
-            endArrow: {
-              path: G6.Arrow.triangle(0, 0, 0), // for some reason endArrow: false doesn't work
-              d: 0 // offset
-            }
-          }
-        });
-        this.graph.setItemState(edge, "running", true);
+        edge.setState("running", true);
+        edge.setState("hover", "connected");
+        // this.graph.setItemState(edge, "active", true);
       });
+      node.setState("hover", "connected");
     });
     this.graph.on("node:mouseleave", ev => {
       // reset all edges to default
-      var edges = this.graph.getEdges();
-      edges.forEach(edge => {
-        edge.update({
-          style: {
-            opacity: 1,
-            lineWidth: 1,
-            endArrow: {
-              path: G6.Arrow.triangle(4, 4, 0),
-              d: 0 // offset
-            }
-          }
-        });
-      });
+      var edges = this.graph
+        .getEdges()
+        .forEach(edge => edge.setState("hover", "nothovering"));
+      var edges = this.graph
+        .getNodes()
+        .forEach(node => node.setState("hover", "nothovering"));
       const node = ev.item;
       edges = node.getEdges();
-      edges.forEach(edge => this.graph.setItemState(edge, "running", false));
+      edges.forEach(edge => edge.setState("running", false));
+      node.setState("hover", "nothovering");
     });
+    this.set;
     this.redraw();
   }
 };

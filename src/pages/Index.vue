@@ -155,6 +155,7 @@
           ></q-tab-panel>
           <q-tab-panel name="graph" key="graph"
             ><graph
+              ref="graph"
               @nodeClick="onNodeClick"
               :file="compiled.sourceFile"
               :gates="compiled.gates"
@@ -395,14 +396,16 @@ export default {
     },
     onNodeClick(nodeid, clock) {
       // the user clicked a node in the graph, if it is a control node toggle its value and re-run the simulation
-      console.log("onNodeClick", nodeid, clock);
+      // console.log("onNodeClick", nodeid, clock);
       const foundNode = this.compiled.gates.find(g => g.id == nodeid);
       if (foundNode && foundNode.logic == "control") {
+        // console.log("resimulating");
         foundNode.state = ~foundNode.state & 1;
         var gatesLookup = indexBy(this.compiled.gates, "id");
         for (let i = 0; i < this.EVALS_PER_STEP; i++) {
           evaluate(this.compiled.gates, gatesLookup);
         }
+        this.$refs.graph.updateLogicStates();
       }
     },
     simulate() {
