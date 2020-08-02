@@ -2,20 +2,42 @@
   <div class="q-pa-md q-gutter-md">
     <q-card
       ><q-card-section>
-        <q-btn @click="redraw" label="Redraw"></q-btn>
-        <q-radio v-model="layout" val="force" label="Force"></q-radio
-        ><q-radio v-model="layout" val="dagre" label="Dagre"></q-radio>
-        <q-slider
-          v-if="layout == 'force'"
-          v-model="linkDistance"
-          :min="10"
-          :max="300"
-          :step="25"
-        ></q-slider>
-        <q-checkbox v-model="showNodeLabels" label="Node Labels"></q-checkbox>
+        <div class="column">
+          <div class="q-gutter-y-sm">
+            <div class="row items-center q-gutter-x-md">
+              <!-- <q-chip>{{ file }}</q-chip> -->
+              <q-btn @click="redraw" :label="file"></q-btn>
+              <q-checkbox
+                v-model="showNodeLabels"
+                label="Gate Labels"
+              ></q-checkbox>
+            </div>
+            <div
+              v-if="simulation.time.length > 0"
+              class="row items-center q-gutter-x-md"
+            >
+              <div>Simulation:</div>
+              <q-chip>t = {{ selectedTime }} </q-chip>
+              <q-chip v-if="selectedNode">{{ selectedNode }}</q-chip>
+              <q-chip v-else
+                >Click select a node and drag the trace timeline</q-chip
+              >
+            </div>
+            <div class="row items-center" v-if="simulation && selectedNode">
+              <dygraph
+                id="timeLine"
+                :data="timeLineData"
+                @clicked="timeLineClicked"
+              ></dygraph>
+            </div>
+          </div>
+        </div>
       </q-card-section>
       <q-separator />
-      <q-card-section> <div ref="graph"></div></q-card-section
+      <q-card-section
+        ><div ref="graphParent" class="row" style="width:100%">
+          <div ref="graph"></div>
+        </div> </q-card-section
     ></q-card>
   </div>
 </template>
@@ -68,26 +90,38 @@ G6.registerEdge(
   "cubic-horizontal"
 );
 
-// TODO: Edge animation for running state: https://g6.antv.vision/en/examples/scatter/stateChange
+// import TraceChart from "./traceChart.js";
+import dygraph from "./dygraph";
 
 export default {
   // name: 'ComponentName',
-  props: ["gates", "instances"],
+  props: ["gates", "instances", "file", "simulation", "simulationCounter"],
+  // components: { TraceChart },
+  components: { dygraph },
   data() {
     return {
       graph: null,
       layout: "dagre",
       showNodeLabels: false,
       linkDistance: 150,
-      time: 0
+      selectedTime: 0,
+      selectedNode: null,
+      timeLineOptions: {}
     };
   },
   watch: {
+    simulationCounter: function() {
+      this.selectedTime = this.simulation.maxTime;
+    },
+    simulation: function(val) {
+      console.log("watchsim", val);
+    },
     graphData: function(val) {
       console.log("graphData Watch");
       // this.graph.data(val);
       this.graph.changeData(val);
-      this.updateLogicStates();
+      this.showLogicStates();
+      this.selectedTime = this.simulation.maxTime;
     },
     graphConfig: function(val) {
       console.log("graphConfig Watch");
@@ -95,13 +129,23 @@ export default {
     }
   },
   methods: {
+    setSelectedTime(newtime) {
+      this.selectedTime = newtime;
+    },
+    timeLineClicked: function(ev) {
+      this.selectedTime = ev.x;
+      this.gates.forEach(
+        gate => (gate.state = this.simulation.gates[gate.id][this.selectedTime])
+      );
+      this.showLogicStates();
+    },
     redraw: function() {
       // console.log("redraw");
       this.graph.data(this.graphData);
       this.graph.render();
-      this.updateLogicStates();
+      this.showLogicStates();
     },
-    updateLogicStates: function() {
+    showLogicStates: function() {
       this.gates.forEach(gate => {
         const node = this.graph.findById(gate.id);
         node.setState("logic", gate.state == 1 ? "on" : "off");
@@ -114,6 +158,19 @@ export default {
     }
   },
   computed: {
+    timeLineData: function() {
+      if (this.simulation.gates[this.selectedNode]) {
+        let data = [];
+        for (let i = 0; i < this.simulation.time.length; i++) {
+          data.push([
+            this.simulation.time[i],
+            this.simulation.gates[this.selectedNode][i]
+          ]);
+        }
+        return data;
+      }
+      return [];
+    },
     graphConfig: function() {
       if (this.layout == "force")
         return {
@@ -155,7 +212,11 @@ export default {
               comboId: x.instance
               // logicState: x.state
             };
-            if (x.logic == "buffer" || x.logic == "control") {
+            if (
+              x.logic == "buffer" ||
+              x.logic == "control" ||
+              x.logic == "not"
+            ) {
               (graphNode.anchorPoints = [
                 [0, 0.5],
                 [1, 0.5]
@@ -198,11 +259,11 @@ export default {
     }
   },
   mounted() {
-    // console.log("mounted");
+    this.selectedTime = this.simulation.maxTime || 0;
     this.graph = new G6.Graph({
       container: this.$refs.graph,
-      width: 700,
       height: 700,
+      width: this.$refs.graphParent.clientWidth,
       groupByTypes: false,
       fitView: true,
       fitViewPadding: 40,
@@ -334,10 +395,20 @@ export default {
         ]
       }
     });
+
     this.graph.on("node:click", ev => {
-      const shape = ev.target;
+      if (!this.simulation.time) return;
+
       const node = ev.item;
-      this.$emit("nodeClick", node.get("id"), this.time);
+      const nodeid = node.get("id");
+      if (!(nodeid == this.selectedNode)) {
+        this.selectedNode = nodeid; // new selection
+        return;
+      }
+
+      // node already selected therefore clicks will toggle state
+      this.$emit("nodeClick", this.selectedNode, this.selectedTime);
+      this.selectedTime = "User";
       const saveState = node.hasState("selected");
       node.setState("selected", !saveState);
     });

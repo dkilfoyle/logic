@@ -160,6 +160,8 @@
               :file="compiled.sourceFile"
               :gates="compiled.gates"
               :instances="compiled.instances"
+              :simulation="compiled.simulation"
+              :simulationCounter="simulationCounter"
           /></q-tab-panel>
         </q-tab-panels>
       </div>
@@ -288,13 +290,14 @@ export default {
       terminal: {},
       showTerminal: true,
       fitAddon: {},
+      simulationCounter: 0,
       compiled: {
         state: "uncompiled",
         sourceFile: "",
         parseTree: { lint: [] },
         gates: [],
         instances: [],
-        simulation: {}
+        simulation: { gates: {}, time: [], maxTime: 0 }
       },
       tab: "code",
       layout: "dagre",
@@ -405,7 +408,7 @@ export default {
         for (let i = 0; i < this.EVALS_PER_STEP; i++) {
           evaluate(this.compiled.gates, gatesLookup);
         }
-        this.$refs.graph.updateLogicStates();
+        this.$refs.graph.showLogicStates();
       }
     },
     simulate() {
@@ -415,10 +418,10 @@ export default {
           chalk.yellow(this.compiled.sourceFile)
       );
 
-      this.compiled.simulation = {};
+      this.$set(this.compiled.simulation, "gates", {});
       this.compiled.gates.forEach(g => {
         g.state = 0;
-        this.compiled.simulation[g.id] = [];
+        this.$set(this.compiled.simulation.gates, g.id, []);
       });
 
       var gatesLookup = indexBy(this.compiled.gates, "id");
@@ -430,7 +433,7 @@ export default {
         0
       );
 
-      this.compiled.simulation.time = [];
+      this.$set(this.compiled.simulation, "time", []);
       if (gatesLookup["main.clock"]) gatesLookup["main.clock"].state = 0;
 
       for (let clock = 0; clock <= maxClock; clock++) {
@@ -452,7 +455,7 @@ export default {
           evaluate(this.compiled.gates, gatesLookup);
         }
         this.compiled.gates.forEach(g => {
-          this.compiled.simulation[g.id].push(gatesLookup[g.id].state);
+          this.compiled.simulation.gates[g.id].push(gatesLookup[g.id].state);
         });
 
         modulesLookup.main.clock.forEach((x, index, all) => {
@@ -477,6 +480,10 @@ export default {
       this.termWriteln(
         chalk.cyan.inverse(" DONE ") + "  Simulated successfully"
       );
+      this.compiled.simulation.maxTime = this.compiled.simulation.time[
+        this.compiled.simulation.time.length - 1
+      ];
+      this.simulationCounter = this.simulationCounter + 1;
     }
   },
   mounted() {

@@ -60,7 +60,7 @@ export default {
           {
             ...this.traceColor(id),
             label: id,
-            data: this.simulation[id],
+            data: this.simulation.gates[id],
             steppedLine: true,
             pointRadius: 0
           }
