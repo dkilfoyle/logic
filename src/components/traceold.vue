@@ -23,7 +23,10 @@
           <q-scroll-area style="height:70vh">
             <div class="row" v-for="g in selectedGates" :key="g.globalid">
               <div class="col-9">
-                <dygraph :data="tracedata(g.globalid)"></dygraph>
+                <trace-chart
+                  :chart-data="tracedata(g.globalid)"
+                  :options="traceoptions"
+                ></trace-chart>
               </div>
               <div class="col-3">
                 <!-- <div class="text-caption">{{ g.globalid }}</div> -->
@@ -38,24 +41,31 @@
 </template>
 
 <script>
+import TraceChart from "./traceChart.js";
 import SelectionMixin from "./selections";
-import dygraph from "./dygraph";
 
 export default {
   props: ["simulation", "gates", "instances", "file"],
   mixins: [SelectionMixin],
-  components: { dygraph },
+  components: { TraceChart },
   data() {
     return {};
   },
 
   methods: {
     tracedata: function(id) {
-      let data = [];
-      for (let i = 0; i < this.simulation.time.length; i++) {
-        data.push([this.simulation.time[i], this.simulation.gates[id][i]]);
-      }
-      return data;
+      return {
+        labels: this.simulation.time,
+        datasets: [
+          {
+            ...this.traceColor(id),
+            label: id,
+            data: this.simulation.gates[id],
+            steppedLine: true,
+            pointRadius: 0
+          }
+        ]
+      };
     },
     traceColor: function(id) {
       if (this.selectedInstance.outputs.some(x => x.globalid == id))
