@@ -74,11 +74,11 @@ quasar dev
    1. Ripple counter
    1. Shift register
    1. FSMs
-2. ~~Support bitwise statements to generate the logic gates eg Q = (A & B) | ~C~~
+2. ~~Support bitwise statements to generate the logic gates~~ eg Q = (A & B) | ~C
 3. Reuse intermediary gates
 4. Support bit vector type
-5. Improve gate tables with time slider to animate state
-6. Improve schematic with time slider to animate state
+5. ~~Improve traces with time slider to animate state~~
+6. ~~Improve schematic with time slider to animate state~~
 7. Experiment with better schematic graph layouts, custom combo
 8. More linting
 9. ~~Code hints (Ctrl-Space)~~, ~~snippets (Ctrl-Shift-Space)~~, ~~comment hotkey~~,
@@ -92,4 +92,4 @@ quasar dev
 3. [Quasar.dev](https://quasar.dev/)
 4. [G6 Graph](https://g6.antv.vision/en/)
 5. [CodeMirror](https://codemirror.net/)
-6. [ChartJS](https://www.chartjs.org/)
+6. [Dygraphs](https://www.dygraphs.com/)
