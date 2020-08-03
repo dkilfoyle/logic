@@ -3,12 +3,15 @@
 </template>
 
 <script>
-import Dygraph from "dygraphs";
+// import Dygraph from "dygraphs";
+// import Crosshair from "./crosshair.js";
+
+import _DygraphRoot from "dygraphs";
+window.Dygraph = _DygraphRoot;
+require("dygraphs/src/extras/crosshair");
+
 import "dygraphs/dist/dygraph.css";
 
-import Crosshair from "./crosshair.js";
-
-// let Dygraph = null;
 export default {
   // adapted from dashblocks github.com/slanatech/dashblocks
 
@@ -32,7 +35,9 @@ export default {
       needUpdate: false,
       needOptionsUpdate: false,
       defaultOptions: {
-        plugins: [new Crosshair({ direction: "vertical" })],
+        plugins: [
+          new window.Dygraph.Plugins.Crosshair({ direction: "vertical" })
+        ],
         animatedZooms: true,
         showLabelsOnHighlight: false,
         zoomCallback: this.handleZoom,
@@ -44,7 +49,7 @@ export default {
         rangeSelectorHeight: 20,
         axes: {
           x: {
-            drawGrid: true
+            drawGrid: false
           },
           y: {
             drawAxis: false
@@ -58,7 +63,7 @@ export default {
     graphOptions: {
       get() {
         // filter out proprietary options
-        return Object.assign({}, this.defaultOptions, this.options);
+        return Object.assign({}, this.defaultOptions, this.options); // todo: use lowdash merge for deep merge
       },
       set() {
         /*noop*/
@@ -66,14 +71,13 @@ export default {
     }
   },
   mounted() {
-    // import("dygraphs").then(module => {
-    //   Dygraph = module.default;
-    //   import("dygraphs/src/extras/crosshair.js");
-    //   this.$nextTick(() => {
-    //     this.render();
-    //   });
-    // });
+    this.graph = new window.Dygraph(
+      this.$refs.container,
+      this.getData(),
+      this.graphOptions
+    );
     this.render();
+    this.$emit("created", this.graph);
   },
   watch: {
     _updated: function() {
@@ -91,11 +95,6 @@ export default {
   methods: {
     render() {
       // console.log("Rendering Dygraph ...");
-      this.graph = new Dygraph(
-        this.$refs.container,
-        this.getData(),
-        this.graphOptions
-      );
     },
     getData() {
       // pre-process data if needed

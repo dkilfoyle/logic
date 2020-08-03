@@ -21,16 +21,37 @@
 
         <div v-if="selectedInstance">
           <q-scroll-area style="height:70vh">
-            <div class="row" v-for="g in selectedGates" :key="g.globalid">
-              <div class="col-9">
-                <dygraph :data="tracedata(g.globalid)"></dygraph>
+            <div
+              class="row q-pb-sm"
+              v-for="g in selectedGates"
+              :key="g.globalid"
+            >
+              <div class="col-10">
+                <dygraph
+                  :data="tracedata(g.globalid)"
+                  :options="traceOptions(g.globalid)"
+                  ref="traces"
+                ></dygraph>
               </div>
-              <div class="col-3">
-                <!-- <div class="text-caption">{{ g.globalid }}</div> -->
+              <div class="col-2">
                 <div class="text-caption">{{ g.instanceid }}</div>
               </div>
-            </div></q-scroll-area
-          >
+            </div>
+            <div class="row">
+              <div class="col-10">
+                <dygraph
+                  :data="clock"
+                  :options="{
+                    showRangeSelector: true,
+                    rangeSelectorHeight: 100
+                  }"
+                  ref="clock"
+                >
+                </dygraph>
+              </div>
+              <div class="col-2"><div class="text-caption">Clock</div></div>
+            </div>
+          </q-scroll-area>
         </div>
       </div>
     </div>
@@ -41,6 +62,10 @@
 import SelectionMixin from "./selections";
 import dygraph from "./dygraph";
 
+import _DygraphRoot from "dygraphs";
+window.Dygraph = _DygraphRoot;
+require("dygraphs/src/extras/synchronizer");
+
 export default {
   props: ["simulation", "gates", "instances", "file"],
   mixins: [SelectionMixin],
@@ -48,8 +73,25 @@ export default {
   data() {
     return {};
   },
-
+  computed: {
+    clock: function() {
+      return this.simulation.clock.map((x, i) => [i, x]);
+    }
+  },
+  watch: {
+    selectedGates: function(newselection) {
+      this.$nextTick(() => {
+        this.syncTraces();
+      });
+    }
+  },
   methods: {
+    syncTraces() {
+      if (this.$refs.traces.length == 0) return;
+      let traces = this.$refs.traces.map(x => x.graph);
+      traces.push(this.$refs.clock.graph);
+      Dygraph.synchronize(traces);
+    },
     tracedata: function(id) {
       let data = [];
       for (let i = 0; i < this.simulation.time.length; i++) {
@@ -57,49 +99,31 @@ export default {
       }
       return data;
     },
-    traceColor: function(id) {
-      if (this.selectedInstance.outputs.some(x => x.globalid == id))
-        return {
-          backgroundColor: "rgba(255,99,132,0.2)",
-          borderColor: "rgba(255,99,132,1)"
-        };
-      if (this.selectedInstance.inputs.some(x => x.globalid == id))
-        return {
-          backgroundColor: "rgba(54, 162, 235, 0.2)",
-          borderColor: "rgba(54, 162, 235, 1)"
-        };
-    }
-  },
-  computed: {
-    clockData: function() {
+    traceOptions: function(id) {
       return {
-        labels: this.simulation.time,
-        datasets: [
-          {
-            label: "clock",
-            data: this.simulation.clock,
-            steppedLine: true,
-            pointRadius: 0
-          }
-        ]
-      };
-    },
-    traceoptions: function() {
-      return {
-        legend: {
-          display: false
+        height: 50,
+        showRangeSelector: false,
+        axes: {
+          x: { drawAxis: false, drawGrid: false },
+          y: { drawAxis: false, drawGrid: false }
         },
-        scales: {
-          yAxes: [
-            {
-              ticks: {
-                stepSize: 1
-              }
-            }
-          ]
+        series: {
+          Y1: { color: this.traceColor(id) }
         }
       };
+    },
+    traceColor: function(id) {
+      if (this.selectedInstance.outputs.some(x => x.globalid == id))
+        return "rgb(255,99,132)";
+      if (this.selectedInstance.inputs.some(x => x.globalid == id)) {
+        return "steelblue";
+      }
+
+      return "darkgrey";
     }
+  },
+  mounted() {
+    this.syncTraces();
   }
 };
 </script>

@@ -424,6 +424,8 @@ export default {
         this.$set(this.compiled.simulation.gates, g.id, []);
       });
 
+      this.$set(this.compiled.simulation, "clock", []);
+
       var gatesLookup = indexBy(this.compiled.gates, "id");
       var instancesLookup = indexBy(this.compiled.instances, "id");
       var modulesLookup = indexBy(this.compiled.parseTree, "id");
@@ -457,6 +459,8 @@ export default {
         this.compiled.gates.forEach(g => {
           this.compiled.simulation.gates[g.id].push(gatesLookup[g.id].state);
         });
+
+        this.compiled.simulation.clock.push(clock % 2);
 
         modulesLookup.main.clock.forEach((x, index, all) => {
           if (x.time != clock) return;

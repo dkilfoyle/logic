@@ -31,6 +31,10 @@ export default {
           return [...instance.inputs];
       }
       return [];
+    },
+    allInstanceGates: function() {
+      var instance = this.selectedInstance;
+      return [...instance.inputs, ...instance.wires, ...instance.outputs];
     }
   },
   methods: {
