@@ -37,13 +37,14 @@
                 <div class="text-caption">{{ g.instanceid }}</div>
               </div>
             </div>
-            <div class="row">
+            <div class="row q-pt-lg">
               <div class="col-10">
                 <dygraph
                   :data="clock"
                   :options="{
                     showRangeSelector: true,
-                    rangeSelectorHeight: 100
+                    rangeSelectorHeight: 80,
+                    axes: { y: { axisLabelWidth: 5 } }
                   }"
                   ref="clock"
                 >
@@ -103,9 +104,23 @@ export default {
       return {
         height: 50,
         showRangeSelector: false,
+        xrangePad: 5,
         axes: {
-          x: { drawAxis: false, drawGrid: false },
-          y: { drawAxis: false, drawGrid: false }
+          x: {
+            drawAxis: false,
+            drawGrid: false
+            // axisLabelWidth: 0,
+            // axisLabelFontSize: 0,
+          },
+          y: {
+            drawAxis: true,
+            drawGrid: false,
+            axisLabelWidth: 5,
+            axisLineColor: "white",
+            axisLabelFormatter: () => {
+              return null;
+            }
+          }
         },
         series: {
           Y1: { color: this.traceColor(id) }
