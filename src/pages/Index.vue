@@ -273,6 +273,7 @@ import OneHotDecoder from "../files/onehotdecoder.v";
 import SevenSeg from "../files/7seg.v";
 import Mux2_1 from "../files/mux.v";
 import DeMux from "../files/demux.v";
+import RippleCounter from "../files/ripplecounter.v";
 
 import Vue from "vue";
 
@@ -308,10 +309,18 @@ export default {
         OneHotDecoder,
         SevenSeg,
         Mux2_1,
-        DeMux
+        DeMux,
+        RippleCounter
       },
-      sourceTab: "Mux2_1",
-      openFiles: ["Scratch", "OneHotDecoder", "SevenSeg", "Mux2_1", "DeMux"],
+      sourceTab: "RippleCounter",
+      openFiles: [
+        "Scratch",
+        "OneHotDecoder",
+        "SevenSeg",
+        "Mux2_1",
+        "DeMux",
+        "RippleCounter"
+      ],
       errors: {}
     };
   },
@@ -449,6 +458,7 @@ export default {
             });
           }
         });
+
         if (gatesLookup["main.clock"])
           gatesLookup["main.clock"].state =
             ~gatesLookup["main.clock"].state & 1;
