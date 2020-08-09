@@ -49,5 +49,6 @@ module main(
     #12 {a=1, b=0, cin=1};
     #14 {a=1, b=1, cin=0};
     #16 {a=1, b=1, cin=1};
+    #18;
 	end
 endmodule

@@ -1,0 +1,101 @@
+{
+  "id": "dff1",
+  "hwMeta": {
+    "name": "dff1",
+    "maxId": 20
+  },
+  "properties": {
+    "org.eclipse.elk.portConstraints": "FIXED_ORDER",
+    "org.eclipse.elk.randomSeed": 0,
+    "org.eclipse.elk.layered.mergeEdges": 1
+  },
+  "ports": [
+    {
+      "id": "dff1_clk",
+      "hwMeta": {
+        "level": 0,
+        "name": "A"
+      },
+      "direction": "INPUT",
+      "properties": {
+        "portSide": "WEST",
+        "portIndex": 0
+      }
+    },
+    {
+      "id": "dff1_dIn",
+      "hwMeta": {
+        "level": 0,
+        "name": "dIn"
+      },
+      "direction": "INPUT",
+      "properties": {
+        "portSide": "WEST",
+        "portIndex": 1
+      }
+    },
+    {
+      "id": "dff1_q",
+      "hwMeta": {
+        "level": 0,
+        "name": "q"
+      },
+      "direction": "OUTPUT",
+      "properties": {
+        "portSide": "EAST",
+        "portIndex": 2
+      }
+    }
+  ],
+  "children": [
+    {
+      "id": "dff1_notdIn",
+      "hwMeta": {
+        "name": "NOT",
+        "maxId": 20
+      },
+      "properties": {
+        "org.eclipse.elk.portConstraints": "FIXED_ORDER",
+        "org.eclipse.elk.randomSeed": 0,
+        "org.eclipse.elk.layered.mergeEdges": 1
+      },
+      "ports": [
+        {
+          "id": "dff1_notdIn_input",
+          "hwMeta": {
+            "level": 0,
+            "name": null
+          },
+          "direction": "INPUT",
+          "properties": {
+            "portSide": "WEST",
+            "portIndex": 0
+          }
+        },
+        {
+          "id": "dff1_notdIn_output",
+          "hwMeta": {
+            "level": 0,
+            "name": null
+          },
+          "direction": "OUTPUT",
+          "properties": {
+            "portSide": "EAST",
+            "portIndex": 1
+          }
+        }
+      ],
+      "children": [],
+      "edges": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "11",
+      "source": "dff1",
+      "sourcePort": "dff1_dIn",
+      "target": "dff1_notdIn",
+      "targetPort": "dff1_notdIn_input"
+    }
+  ]
+}

@@ -6,13 +6,13 @@ const createInstance = (outputNamespace, instance) => {
 
   const instanceModule = modules[instance.module];
 
-  const varMap = instance.params.reduce((acc, param) => {
-    acc[param.param] = {
-      globalid: outputNamespace + param.mapped.id,
+  const varMap = instance.parameters.reduce((acc, parameter) => {
+    acc[parameter.port] = {
+      globalid: outputNamespace + parameter.value.id,
       type: "port",
-      moduleid: param.param,
-      instanceid: outputNamespace + instance.id + "." + param.param,
-      porttype: instanceModule.ports.find(x => x.id == param.param).type
+      moduleid: parameter.port,
+      instanceid: outputNamespace + instance.id + "." + parameter.port,
+      porttype: instanceModule.ports.find(x => x.id == parameter.port).type
     };
     return acc;
   }, {});
@@ -36,6 +36,7 @@ const createInstance = (outputNamespace, instance) => {
       id: varMap[gate.id].instanceid,
       logic: gate.gate,
       inputs: gate.params.map(param => varMap[param].globalid),
+      inputsLocal: gate.params.map(param => varMap[param].instanceid),
       instance: outputNamespace + instance.id,
       state: 0
     });
@@ -152,9 +153,9 @@ const walk = ast => {
 
   // create an instance of main module
   const mainInstance = {
-    params: modules.main.ports.map(p => ({
-      param: p.id,
-      mapped: { id: "main." + p.id }
+    parameters: modules.main.ports.map(p => ({
+      port: p.id,
+      value: { id: "main." + p.id }
     })),
     id: "main",
     module: "main"

@@ -27,6 +27,13 @@
             icon="electrical_services"
             :disable="!compiled.gates.length"
           ></q-tab>
+
+          <q-tab
+            name="schematic"
+            label="Schematic2"
+            icon="electrical_services"
+            :disable="!compiled.gates.length"
+          ></q-tab>
         </q-tabs>
 
         <q-tab-panels
@@ -163,6 +170,14 @@
               :simulation="compiled.simulation"
               :simulationCounter="simulationCounter"
           /></q-tab-panel>
+          <q-tab-panel name="schematic" key="schematic"
+            ><schematic
+              ref="schematic"
+              :file="compiled.sourceFile"
+              :gates="compiled.gates"
+              :instances="compiled.instances"
+              :simulation="compiled.simulation"
+          /></q-tab-panel>
         </q-tab-panels>
       </div>
     </div>
@@ -174,6 +189,7 @@ import Editor from "../components/editor/Editor";
 import Graph from "../components/graph";
 import Trace from "../components/trace";
 import Gates from "../components/gates";
+import Schematic from "../components/schematic";
 
 import vlgParser from "../components/vlgParser.js";
 import vlgWalker from "./vlgWalker.js";
@@ -204,6 +220,7 @@ const not = x => ~x & 1;
 const logicFunctions = {
   not: a => ~a & 1,
   buffer: a => a,
+  response: a => a,
   and2: (a, b) => a && b,
   nand2: (a, b) => not(a && b),
   or2: (a, b) => a || b,
@@ -222,7 +239,7 @@ const evaluate = (components, componentLookup) => {
   const logicOperation = component => {
     let logicFn = component.logic;
     if (component.inputs.length == 1) {
-      if (!(logicFn == "not" || logicFn == "buffer")) {
+      if (!(logicFn == "not" || logicFn == "buffer" || logicFn == "response")) {
         console.log(
           "Gate evaluation error - 1 input only valid for not and buffer gates"
         );
@@ -269,6 +286,7 @@ const evaluate = (components, componentLookup) => {
 import BitAdder from "../files/1bitadder.v";
 import DFF from "../files/dff.v";
 import Scratch from "../files/scratch.v";
+import Scratch2 from "../files/scratch2.v";
 import OneHotDecoder from "../files/onehotdecoder.v";
 import SevenSeg from "../files/7seg.v";
 import Mux2_1 from "../files/mux.v";
@@ -283,7 +301,8 @@ export default {
     Editor,
     Graph,
     Gates,
-    Trace
+    Trace,
+    Schematic
   },
   data() {
     return {
@@ -306,20 +325,22 @@ export default {
         BitAdder,
         DFF,
         Scratch,
+        Scratch2,
         OneHotDecoder,
         SevenSeg,
         Mux2_1,
         DeMux,
         RippleCounter
       },
-      sourceTab: "RippleCounter",
+      sourceTab: "Scratch2",
       openFiles: [
-        "Scratch",
+        "Scratch2",
         "OneHotDecoder",
         "SevenSeg",
         "Mux2_1",
         "DeMux",
-        "RippleCounter"
+        "RippleCounter",
+        "BitAdder"
       ],
       errors: {}
     };

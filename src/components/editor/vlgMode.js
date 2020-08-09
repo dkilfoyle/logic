@@ -25,7 +25,7 @@ CodeMirror.defineSimpleMode("vlg", {
     },
 
     {
-      regex: /(?:not|and|or|xor|nand|control|buffer)\b/,
+      regex: /(?:not|and|or|xor|nand|control|buffer|response)\b/,
       token: "keyword"
     },
     {
@@ -116,7 +116,9 @@ var dictionary = {
     "xor(",
     "nor(",
     "not(",
-    "control",
+    "control(",
+    "response(",
+    "buffer(",
     "input",
     "output",
     "wire",

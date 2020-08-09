@@ -82,9 +82,15 @@ module.exports = function(/* ctx */) {
           }
         });
         cfg.module.rules.push({
-          test: /\.v$/i,
-          use: "raw-loader"
+          test: /\.(v|txt)$/i,
+          use: "raw-loader",
+          exclude: /node_modules/
         });
+        // cfg.module.rules.push({
+        //   test: /\.json$/i,
+        //   use: "json-loader",
+        //   exclude: /node_modules/
+        // });
       }
     },
 
