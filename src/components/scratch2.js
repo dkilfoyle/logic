@@ -9,13 +9,13 @@ const netlist = {
   ports: [],
   children: [
     {
-      id: "main.user1.gate",
-      hwMeta: { name: "main.user1" },
+      id: "main.a.gate",
+      hwMeta: { name: "main.a" },
       properties: {},
       hideChildren: true,
       ports: [
         {
-          id: "main.user1",
+          id: "main.a",
           hwMeta: { name: null },
           direction: "OUTPUT",
           properties: { portSide: "EAST" }
@@ -23,13 +23,13 @@ const netlist = {
       ]
     },
     {
-      id: "main.user2.gate",
-      hwMeta: { name: "main.user2" },
+      id: "main.b.gate",
+      hwMeta: { name: "main.b" },
       properties: {},
       hideChildren: true,
       ports: [
         {
-          id: "main.user2",
+          id: "main.b",
           hwMeta: { name: null },
           direction: "OUTPUT",
           properties: { portSide: "EAST" }
@@ -37,22 +37,62 @@ const netlist = {
       ]
     },
     {
-      id: "main.o1.gate",
-      hwMeta: { name: "main.o1" },
+      id: "main.cin.gate",
+      hwMeta: { name: "main.cin" },
       properties: {},
       hideChildren: true,
       ports: [
         {
-          id: "main.o1_input_0",
+          id: "main.cin",
+          hwMeta: { name: null },
+          direction: "OUTPUT",
+          properties: { portSide: "EAST" }
+        }
+      ]
+    },
+    {
+      id: "main.sum.gate",
+      hwMeta: { name: "main.sum" },
+      properties: {},
+      hideChildren: true,
+      ports: [
+        {
+          id: "main.sum_input_0",
           hwMeta: { name: null },
           direction: "INPUT",
           properties: { portSide: "WEST" }
+        },
+        {
+          id: "main.sum",
+          hwMeta: { name: null },
+          direction: "OUTPUT",
+          properties: { portSide: "EAST" }
         }
       ]
     },
     {
-      id: "main.foo",
-      hwMeta: { name: "main.foo", maxID: 300 },
+      id: "main.cout.gate",
+      hwMeta: { name: "main.cout" },
+      properties: {},
+      hideChildren: true,
+      ports: [
+        {
+          id: "main.cout_input_0",
+          hwMeta: { name: null },
+          direction: "INPUT",
+          properties: { portSide: "WEST" }
+        },
+        {
+          id: "main.cout",
+          hwMeta: { name: null },
+          direction: "OUTPUT",
+          properties: { portSide: "EAST" }
+        }
+      ]
+    },
+    {
+      id: "main.uut",
+      hwMeta: { name: "main.uut", maxID: 300 },
       properties: {
         "org.eclipse.elk.portConstraints": "FREE",
         "org.eclipse.elk.hierarchyHandling": "INCLUDE_CHILDREN"
@@ -60,45 +100,173 @@ const netlist = {
       hideChildren: false,
       ports: [
         {
-          id: "main.foo.a",
+          id: "main.uut.a",
           hwMeta: { name: "a" },
           direction: "INPUT",
           properties: { portSide: "WEST" }
         },
         {
-          id: "main.foo.b",
+          id: "main.uut.b",
           hwMeta: { name: "b" },
           direction: "INPUT",
           properties: { portSide: "WEST" }
         },
         {
-          id: "main.foo.X",
-          hwMeta: { name: "X" },
+          id: "main.uut.cin",
+          hwMeta: { name: "cin" },
+          direction: "INPUT",
+          properties: { portSide: "WEST" }
+        },
+        {
+          id: "main.uut.s",
+          hwMeta: { name: "s" },
+          direction: "OUTPUT",
+          properties: { portSide: "EAST" }
+        },
+        {
+          id: "main.uut.cout",
+          hwMeta: { name: "cout" },
           direction: "OUTPUT",
           properties: { portSide: "EAST" }
         }
       ],
       children: [
         {
-          id: "main.foo.X!.gate",
+          id: "main.uut.w1.gate",
           hwMeta: { name: "AND" },
           properties: {},
           hideChildren: true,
           ports: [
             {
-              id: "main.foo.X!_input_0",
+              id: "main.uut.w1_input_0",
               hwMeta: { name: null },
               direction: "INPUT",
               properties: { portSide: "WEST" }
             },
             {
-              id: "main.foo.X!_input_1",
+              id: "main.uut.w1_input_1",
               hwMeta: { name: null },
               direction: "INPUT",
               properties: { portSide: "WEST" }
             },
             {
-              id: "main.foo.X!",
+              id: "main.uut.w1",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
+        },
+        {
+          id: "main.uut.w2.gate",
+          hwMeta: { name: "AND" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.uut.w2_input_0",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.w2_input_1",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.w2",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
+        },
+        {
+          id: "main.uut.w3.gate",
+          hwMeta: { name: "AND" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.uut.w3_input_0",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.w3_input_1",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.w3",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
+        },
+        {
+          id: "main.uut.cout!.gate",
+          hwMeta: { name: "OR" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.uut.cout!_input_0",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.cout!_input_1",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.cout!_input_2",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.cout!",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
+        },
+        {
+          id: "main.uut.s!.gate",
+          hwMeta: { name: "XOR" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.uut.s!_input_0",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.s!_input_1",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.s!_input_2",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.uut.s!",
               hwMeta: { name: null },
               direction: "OUTPUT",
               properties: { portSide: "EAST" }
@@ -108,43 +276,139 @@ const netlist = {
       ],
       edges: [
         {
-          id: "main.user1_main.foo.a",
+          id: "main.a_main.uut.a",
           hwMeta: { name: null },
-          source: "main.user1.gate",
-          sourcePort: "main.user1",
-          target: "main.foo",
-          targetPort: "main.foo.a"
+          source: "main.a.gate",
+          sourcePort: "main.a",
+          target: "main.uut",
+          targetPort: "main.uut.a"
         },
         {
-          id: "main.user2_main.foo.b",
+          id: "main.b_main.uut.b",
           hwMeta: { name: null },
-          source: "main.user2.gate",
-          sourcePort: "main.user2",
-          target: "main.foo",
-          targetPort: "main.foo.b"
+          source: "main.b.gate",
+          sourcePort: "main.b",
+          target: "main.uut",
+          targetPort: "main.uut.b"
         },
         {
-          id: "main.foo.X_main.foo.X!",
-          source: "main.foo.X!gate",
-          sourcePort: "main.foo.X!",
-          target: "main.foo",
-          targetPort: "main.foo.X",
+          id: "main.cin_main.uut.cin",
+          hwMeta: { name: null },
+          source: "main.cin.gate",
+          sourcePort: "main.cin",
+          target: "main.uut",
+          targetPort: "main.uut.cin"
+        },
+        {
+          id: "main.uut.s_main.uut.s!",
+          source: "main.uut.s!.gate",
+          sourcePort: "main.uut.s!",
+          target: "main.uut",
+          targetPort: "main.uut.s",
           hwMeta: { name: null }
         },
         {
-          id: "main.foo.a : main.foo.X!_input_0",
-          source: "main.foo",
-          sourcePort: "main.foo.a",
-          target: "main.foo.X!.gate",
-          targetPort: "main.foo.X!_input_0",
+          id: "main.uut.cout_main.uut.cout!",
+          source: "main.uut.cout!.gate",
+          sourcePort: "main.uut.cout!",
+          target: "main.uut",
+          targetPort: "main.uut.cout",
           hwMeta: { name: null }
         },
         {
-          id: "main.foo.b : main.foo.X!_input_1",
-          source: "main.foo",
-          sourcePort: "main.foo.b",
-          target: "main.foo.X!.gate",
-          targetPort: "main.foo.X!_input_1",
+          id: "main.uut.a : main.uut.w1_input_0",
+          source: "main.uut.a.gate",
+          sourcePort: "main.uut.a",
+          target: "main.uut.w1.gate",
+          targetPort: "main.uut.w1_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.b : main.uut.w1_input_1",
+          source: "main.uut.b.gate",
+          sourcePort: "main.uut.b",
+          target: "main.uut.w1.gate",
+          targetPort: "main.uut.w1_input_1",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.a : main.uut.w2_input_0",
+          source: "main.uut.a.gate",
+          sourcePort: "main.uut.a",
+          target: "main.uut.w2.gate",
+          targetPort: "main.uut.w2_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.cin : main.uut.w2_input_1",
+          source: "main.uut.cin.gate",
+          sourcePort: "main.uut.cin",
+          target: "main.uut.w2.gate",
+          targetPort: "main.uut.w2_input_1",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.b : main.uut.w3_input_0",
+          source: "main.uut.b.gate",
+          sourcePort: "main.uut.b",
+          target: "main.uut.w3.gate",
+          targetPort: "main.uut.w3_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.cin : main.uut.w3_input_1",
+          source: "main.uut.cin.gate",
+          sourcePort: "main.uut.cin",
+          target: "main.uut.w3.gate",
+          targetPort: "main.uut.w3_input_1",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.w1 : main.uut.cout!_input_0",
+          source: "main.uut.w1.gate",
+          sourcePort: "main.uut.w1",
+          target: "main.uut.cout!.gate",
+          targetPort: "main.uut.cout!_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.w2 : main.uut.cout!_input_1",
+          source: "main.uut.w2.gate",
+          sourcePort: "main.uut.w2",
+          target: "main.uut.cout!.gate",
+          targetPort: "main.uut.cout!_input_1",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.w3 : main.uut.cout!_input_2",
+          source: "main.uut.w3.gate",
+          sourcePort: "main.uut.w3",
+          target: "main.uut.cout!.gate",
+          targetPort: "main.uut.cout!_input_2",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.a : main.uut.s!_input_0",
+          source: "main.uut.a.gate",
+          sourcePort: "main.uut.a",
+          target: "main.uut.s!.gate",
+          targetPort: "main.uut.s!_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.b : main.uut.s!_input_1",
+          source: "main.uut.b.gate",
+          sourcePort: "main.uut.b",
+          target: "main.uut.s!.gate",
+          targetPort: "main.uut.s!_input_1",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.uut.cin : main.uut.s!_input_2",
+          source: "main.uut.cin.gate",
+          sourcePort: "main.uut.cin",
+          target: "main.uut.s!.gate",
+          targetPort: "main.uut.s!_input_2",
           hwMeta: { name: null }
         }
       ]
@@ -152,11 +416,19 @@ const netlist = {
   ],
   edges: [
     {
-      id: "main.foo.X : main.o1_input_0",
-      source: "main.foo",
-      sourcePort: "main.foo.X",
-      target: "main.o1.gate",
-      targetPort: "main.o1_input_0",
+      id: "main.uut.s : main.sum_input_0",
+      source: "main.uut.s.gate",
+      sourcePort: "main.uut.s",
+      target: "main.sum.gate",
+      targetPort: "main.sum_input_0",
+      hwMeta: { name: null }
+    },
+    {
+      id: "main.uut.cout : main.cout_input_0",
+      source: "main.uut.cout.gate",
+      sourcePort: "main.uut.cout",
+      target: "main.cout.gate",
+      targetPort: "main.cout_input_0",
       hwMeta: { name: null }
     }
   ]

@@ -34,11 +34,15 @@ export default {
     getInstance(id) {
       return this.instances.find(i => i.id == id);
     },
+    isInputPort(id) {
+      this.getInstance();
+    },
     buildInstance(currentNet) {
       const currentInstance = this.getInstance(currentNet.id);
       console.log("Building ", currentInstance.id, strip(currentInstance));
 
-      // build gates of this instance
+      // build gates of this instance and edges for each of the gates inputs
+      // gate inputs might be another gate or an input port
       currentInstance.gates.forEach(gateId => {
         const gate = this.getGate(gateId);
 
@@ -56,6 +60,7 @@ export default {
           hideChildren: true,
           ports: []
         };
+
         gate.inputs.forEach((input, i) => {
           gateNet.ports.push({
             id: gate.id + "_input_" + i,
@@ -63,15 +68,21 @@ export default {
             direction: "INPUT",
             properties: { portSide: "WEST" }
           });
+
           currentNet.edges.push({
             id: input + " : " + gate.id + "_input_" + i,
-            source: namespace(gate.inputs[i]),
+            source: this.gates.some(
+              x => x.type == "port" && x.id == gate.inputs[i]
+            )
+              ? namespace(gate.inputs[i])
+              : gate.inputs[i] + ".gate", // if the gate input is a port then source is the instance, else source is a gate
             sourcePort: gate.inputs[i],
             target: gate.id + ".gate",
             targetPort: gate.id + "_input_" + i,
             hwMeta: { name: null }
           });
         });
+
         // single output unless response
         if (gate.logic != "response") {
           gateNet.ports.push({
@@ -86,6 +97,7 @@ export default {
       });
 
       // build any sub-instances
+      // build edges to connect currentNet mapped values to the sub-instance input ports
       currentInstance.instances.forEach(childInstanceID => {
         const childInstance = this.getInstance(childInstanceID);
         console.log("-- childInstance: ", childInstanceID, childInstance);
@@ -115,17 +127,19 @@ export default {
             properties: { portSide: "WEST" }
           };
           childNet.ports.push(port);
+
           // get the buffer gate for this port
           const portGate = this.getGate(input);
           childNet.edges.push({
             id: portGate.inputs[0] + "_" + input,
             hwMeta: { name: null },
-            source: portGate.inputs[0] + ".gate",
+            source: portGate.inputs[0] + ".gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
             sourcePort: portGate.inputs[0],
             target: namespace(input),
             targetPort: input
           });
         });
+
         childInstance.outputs.forEach(output => {
           console.log(`---- Port Output: ${localid(output)} = ${output}`);
           let port = {
@@ -135,15 +149,23 @@ export default {
             properties: { portSide: "EAST" }
           };
           childNet.ports.push(port);
+
+          // get the buffer gate for this port the input to which is the final gate (gate!)
           const portGate = this.getGate(output);
-          childNet.edges.push({
+          if (!portGate.inputs[0].indexOf("!")) {
+            console.log("Missing ! : ", portGate);
+            throw new Error("last gate should end with !");
+          }
+          const newEdge = {
             id: output + "_" + portGate.inputs[0],
             source: portGate.inputs[0] + ".gate",
             sourcePort: portGate.inputs[0],
             target: namespace(output),
             targetPort: output,
             hwMeta: { name: null }
-          });
+          };
+          // console.log("NEW EDGE: ", newEdge);
+          childNet.edges.push(newEdge);
         });
 
         this.buildInstance(childNet); // add any child instances of this child
