@@ -9,18 +9,23 @@ import * as d3 from "d3";
 import { HwSchematic } from "./d3-hwschematic";
 import scratch2 from "./scratch2";
 
+import vlgCompile from "./vlgCompile.js";
+
 const strip = x => JSON.parse(JSON.stringify(x));
 const log = x => console.log(strip(x));
 
 export default {
   // name: 'ComponentName',
-  props: ["instances", "gates"],
+  props: ["instances", "gates", "compiled"],
   data() {
     return { elkData: scratch2, g: {} };
   },
   watch: {
     instances(newval) {
-      this.buildNetlist();
+      // this.buildNetlist();
+    },
+    compiled(newval) {
+      console.log(vlgCompile(this.compiled.parseTree.result));
     }
   },
   methods: {
@@ -192,8 +197,9 @@ export default {
     var zoom = d3.zoom();
     zoom.on("zoom", this.zoom);
     svg.call(zoom).on("dblclick.zoom", null);
-    this.g.bindData(this.elkData);
-    this.buildNetlist();
+    // this.g.bindData(this.elkData);
+    // this.buildNetlist();
+    console.log(vlgCompile(this.compiled.parseTree));
   }
 };
 </script>

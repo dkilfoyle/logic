@@ -173,6 +173,7 @@
           <q-tab-panel name="schematic" key="schematic"
             ><schematic
               ref="schematic"
+              :compiled="compiled"
               :file="compiled.sourceFile"
               :gates="compiled.gates"
               :instances="compiled.instances"

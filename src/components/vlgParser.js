@@ -252,7 +252,12 @@ const gateParser = coroutine(function*() {
 
   yield ws(str(";"));
 
-  return { type: "gate", id: params[0], gate, inputs: params.slice(1) };
+  return {
+    type: "gate",
+    id: params[0],
+    gate,
+    inputs: params.slice(1)
+  };
 });
 
 // Assign parser ======================================================
