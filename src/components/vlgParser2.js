@@ -65,7 +65,7 @@ const gateParser = A.contextual(function*() {
   const params = yield betweenRoundBrackets(commaSeparated(identifier));
   yield ws(A.str(";"));
 
-  return { type: "gate", id: params[0], gate, params: params.slice(1) };
+  return { type: "gate", id: params[0], gate, inputs: params.slice(1) };
 });
 
 const assignParser = A.contextual(function*() {

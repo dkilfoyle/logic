@@ -6,28 +6,35 @@ const createInstance = (outputNamespace, instance) => {
 
   const instanceModule = modules[instance.module];
 
-  const varMap = instance.parameters.reduce((acc, parameter) => {
-    acc[parameter.port] = {
-      globalid: outputNamespace + parameter.value.id,
-      type: "port",
-      moduleid: parameter.port,
-      instanceid: outputNamespace + instance.id + "." + parameter.port,
-      porttype: instanceModule.ports.find(x => x.id == parameter.port).type
-    };
-    return acc;
-  }, {});
+  // Mymodule foo(.a(user1), .b(user2), .X(o1))
+  // foo.parameters = [{port:a, value:]
 
-  const addWire = wireLocalID => {
-    varMap[wireLocalID] = {
-      globalid: outputNamespace + instance.id + "." + wireLocalID,
-      instanceid: outputNamespace + instance.id + "." + wireLocalID,
-      moduleid: wireLocalID,
-      type: "wire"
-    };
-    return varMap[wireLocalID].globalid;
-  };
+  // const varMap = instance.parameters.reduce((acc, parameter) => {
+  //   acc[parameter.port] = {
+  //     globalid: outputNamespace + parameter.value.id,
+  //     type: "port",
+  //     moduleid: parameter.port,
+  //     instanceid: outputNamespace + instance.id + "." + parameter.port,
+  //     porttype: instanceModule.ports.find(x => x.id == parameter.port).type
+  //   };
+  //   return acc;
+  // }, {});
 
-  instanceModule.wires.forEach(addWire);
+  // const addWire = wireLocalID => {
+  //   varMap[wireLocalID] = {
+  //     globalid: outputNamespace + instance.id + "." + wireLocalID,
+  //     instanceid: outputNamespace + instance.id + "." + wireLocalID,
+  //     moduleid: wireLocalID,
+  //     type: "wire"
+  //   };
+  //   return varMap[wireLocalID].globalid;
+  // };
+
+  // instanceModule.wires.forEach(addWire);
+
+  // create a gate for each port
+  // create a gate for each gate in statements
+  // recursively call any child instances
 
   // create all the gates first because instance processes needs to refer back to gates
   const addGate = gate => {
@@ -62,7 +69,7 @@ const createInstance = (outputNamespace, instance) => {
         lastOutput = addGate({
           id: curOutput,
           gate: expr[i].value,
-          inputs: [
+          params: [
             i == 1
               ? evaluateAssignNode(expr[i - 1], output + "op" + (i - 1))
               : lastOutput,
@@ -138,14 +145,14 @@ const createInstance = (outputNamespace, instance) => {
   return newInstance;
 };
 
-const walk = ast => {
-  modules = ast.reduce((acc, module) => {
+const compile = parseTree => {
+  modules = parseTree.reduce((modules, module) => {
     if (!module.type == "module") {
       console.log("top level of ast should be modules only");
-      return acc;
+      return modules;
     }
-    acc[module.id] = module;
-    return acc;
+    modules[module.id] = module;
+    return modules;
   }, {});
 
   gates = [];
@@ -153,10 +160,7 @@ const walk = ast => {
 
   // create an instance of main module
   const mainInstance = {
-    parameters: modules.main.ports.map(p => ({
-      port: p.id,
-      value: { id: "main." + p.id }
-    })),
+    parameters: [],
     id: "main",
     module: "main"
   };
@@ -166,4 +170,4 @@ const walk = ast => {
   return { instances, gates };
 };
 
-export default walk;
+export default compile;
