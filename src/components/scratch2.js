@@ -65,40 +65,64 @@ const netlist = {
       },
       hideChildren: false,
       ports: [
+        { hwMeta: {}, direction: "INPUT", properties: { portSide: "WEST" } },
+        { hwMeta: {}, direction: "INPUT", properties: { portSide: "WEST" } },
         {
-          id: "main.foo.a",
-          hwMeta: { name: "a" },
-          direction: "INPUT",
-          properties: { portSide: "WEST" }
-        },
-        {
-          id: "main.foo.b",
-          hwMeta: { name: "b" },
-          direction: "INPUT",
-          properties: { portSide: "WEST" }
-        },
-        {
-          id: "main.foo.X_output",
-          hwMeta: { name: "X" },
+          id: "undefined_output",
+          hwMeta: {},
           direction: "OUTPUT",
           properties: { portSide: "EAST" }
         }
       ],
       children: [
         {
-          id: "main.foo.X.gate",
-          hwMeta: { name: "AND" },
+          id: "main.foo.a.gate",
+          hwMeta: { name: "main.foo.a" },
           properties: {},
           hideChildren: true,
           ports: [
             {
-              id: "main.foo.X_input_0",
+              id: "main.foo.a_input_0",
               hwMeta: { name: null },
               direction: "INPUT",
               properties: { portSide: "WEST" }
             },
             {
-              id: "main.foo.X_input_1",
+              id: "main.foo.a",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
+        },
+        {
+          id: "main.foo.b.gate",
+          hwMeta: { name: "main.foo.b" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.foo.b_input_0",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.foo.b",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
+        },
+        {
+          id: "main.foo.X.gate",
+          hwMeta: { name: "main.foo.X" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.foo.X_input_0",
               hwMeta: { name: null },
               direction: "INPUT",
               properties: { portSide: "WEST" }
@@ -110,44 +134,87 @@ const netlist = {
               properties: { portSide: "EAST" }
             }
           ]
+        },
+        {
+          id: "main.foo.X!.gate",
+          hwMeta: { name: "AND" },
+          properties: {},
+          hideChildren: true,
+          ports: [
+            {
+              id: "main.foo.X!_input_0",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.foo.X!_input_1",
+              hwMeta: { name: null },
+              direction: "INPUT",
+              properties: { portSide: "WEST" }
+            },
+            {
+              id: "main.foo.X!",
+              hwMeta: { name: null },
+              direction: "OUTPUT",
+              properties: { portSide: "EAST" }
+            }
+          ]
         }
       ],
       edges: [
         {
-          id: "main.user1 : main.foo.X_input_0",
+          id: "main.user1 : main.foo.a_input_0",
           source: "main.foo",
-          sourcePort: "main.foo.a",
+          sourcePort: "main.user1",
+          target: "main.foo.a.gate",
+          targetPort: "main.foo.a_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.user2 : main.foo.b_input_0",
+          source: "main.foo",
+          sourcePort: "main.user2",
+          target: "main.foo.b.gate",
+          targetPort: "main.foo.b_input_0",
+          hwMeta: { name: null }
+        },
+        {
+          id: "main.foo.X! : main.foo.X_input_0",
+          source: "main.foo",
+          sourcePort: "main.foo.X!",
           target: "main.foo.X.gate",
           targetPort: "main.foo.X_input_0",
           hwMeta: { name: null }
         },
         {
-          id: "main.user2 : main.foo.X_input_1",
+          id: "main.foo.a : main.foo.X!_input_0",
           source: "main.foo",
-          sourcePort: "main.foo.b",
-          target: "main.foo.X.gate",
-          targetPort: "main.foo.X_input_1",
+          sourcePort: "main.foo.a",
+          target: "main.foo.X!.gate",
+          targetPort: "main.foo.X!_input_0",
           hwMeta: { name: null }
         },
         {
-          id: "main.foo.X_connection",
-          hwMeta: { name: null },
-          source: "main.foo.X.gate",
-          sourcePort: "main.foo.X",
-          target: "main.foo",
-          targetPort: "main.foo.X_output"
+          id: "main.foo.b : main.foo.X!_input_1",
+          source: "main.foo",
+          sourcePort: "main.foo.b",
+          target: "main.foo.X!.gate",
+          targetPort: "main.foo.X!_input_1",
+          hwMeta: { name: null }
         }
       ]
     }
   ],
   edges: [
-    // {
-    //   id: "main.foo.X : main.o1_input_0",
-    //   source: "main",
-    //   target: "main.o1.gate",
-    //   targetPort: "main.o1_input_0",
-    //   hwMeta: { name: null }
-    // }
+    {
+      id: "main.foo.X : main.o1_input_0",
+      source: "main",
+      sourcePort: "main.foo.X",
+      target: "main.o1.gate",
+      targetPort: "main.o1_input_0",
+      hwMeta: { name: null }
+    }
   ]
 };
 export default netlist;

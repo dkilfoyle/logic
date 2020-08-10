@@ -16,13 +16,16 @@ const log = x => console.log(strip(x));
 
 export default {
   // name: 'ComponentName',
-  props: ["parseTree"],
+  props: ["instances", "gates", "compiled"],
   data() {
-    return { elkData: scratch2, g: {}, instances: [], gates: [] };
+    return { elkData: scratch2, g: {} };
   },
   watch: {
-    parseTree(newval) {
-      this.buildNetlist();
+    instances(newval) {
+      // this.buildNetlist();
+    },
+    compiled(newval) {
+      console.log(vlgCompile(this.compiled.parseTree.result));
     }
   },
   methods: {
@@ -63,7 +66,7 @@ export default {
             currentNet.edges.push({
               id: input + " : " + gate.id + "_input_" + i,
               source: currentNet.id,
-              sourcePort: gate.inputs[i], // input - todo: make walker same structure with ports
+              sourcePort: gate.inputsLocal[i], // input - todo: make walker same structure with ports
               target: gate.id + ".gate",
               targetPort: gate.id + "_input_" + i,
               hwMeta: { name: null }
@@ -76,6 +79,19 @@ export default {
             direction: "OUTPUT",
             properties: { portSide: "EAST" }
           });
+          // if gate is same name as an output
+          if (currentNet.ports.some(port => port.id == gate.id + "_output")) {
+            let edge = {
+              id: gate.id + "_connection",
+              hwMeta: { name: null },
+              source: gateNet.id,
+              sourcePort: gate.id, // + "_output",
+              target: currentNet.id,
+              targetPort: gate.id + "_output"
+            };
+            console.log("---- Connection to output: ", edge);
+            currentNet.edges.push(edge);
+          }
           currentNet.children.push(gateNet);
         });
 
@@ -183,13 +199,7 @@ export default {
     svg.call(zoom).on("dblclick.zoom", null);
     // this.g.bindData(this.elkData);
     // this.buildNetlist();
-    const compileResult = vlgCompile(this.parseTree);
-    this.instances = compileResult.instances;
-    this.gates = compileResult.gates;
-    console.log(compileResult);
-    this.buildNetlist(
-      compileResult.instances[compileResult.instances.length - 1]
-    ); // main instance is the last
+    console.log(vlgCompile(this.compiled.parseTree));
   }
 };
 </script>
