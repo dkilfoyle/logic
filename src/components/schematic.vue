@@ -13,12 +13,14 @@ import vlgCompile from "./vlgCompile.js";
 
 const strip = x => JSON.parse(JSON.stringify(x));
 const log = x => console.log(strip(x));
+const localid = x => x.substr(x.lastIndexOf(".") + 1);
+const namespace = x => x.substr(0, x.lastIndexOf("."));
 
 export default {
   // name: 'ComponentName',
   props: ["parseTree"],
   data() {
-    return { elkData: scratch2, g: {}, instances: [], gates: [] };
+    return { elkData: {}, g: {}, instances: [], gates: [] };
   },
   watch: {
     parseTree(newval) {
@@ -26,6 +28,9 @@ export default {
     }
   },
   methods: {
+    getGate(id) {
+      return this.gates.find(i => i.id == id);
+    },
     getInstance(id) {
       return this.instances.find(i => i.id == id);
     },
@@ -34,50 +39,51 @@ export default {
       console.log("Building ", currentInstance.id, strip(currentInstance));
 
       // build gates of this instance
-      this.gates
-        .filter(gate => gate.instance == currentNet.id)
-        .forEach(gate => {
-          console.log("-- Gate: ", gate.id, gate);
+      currentInstance.gates.forEach(gateId => {
+        const gate = this.getGate(gateId);
 
-          const gateNet = {
-            id: gate.id + ".gate",
-            hwMeta: {
-              name:
-                gate.logic == "control" || gate.logic == "buffer"
-                  ? gate.id
-                  : gate.logic.toUpperCase()
-            },
-            properties: {},
-            hideChildren: true,
-            ports: []
-          };
-          gate.inputs.forEach((input, i) => {
-            console.log("----Gate Input: ", input);
-            // is the input a port or a gate
-            gateNet.ports.push({
-              id: gate.id + "_input_" + i,
-              hwMeta: { name: null },
-              direction: "INPUT",
-              properties: { portSide: "WEST" }
-            });
-            currentNet.edges.push({
-              id: input + " : " + gate.id + "_input_" + i,
-              source: currentNet.id,
-              sourcePort: gate.inputs[i], // input - todo: make walker same structure with ports
-              target: gate.id + ".gate",
-              targetPort: gate.id + "_input_" + i,
-              hwMeta: { name: null }
-            });
-          });
-          // single output
+        const gateNet = {
+          id: gate.id + ".gate",
+          hwMeta: {
+            name:
+              gate.logic == "control" ||
+              gate.logic == "buffer" ||
+              gate.logic == "response"
+                ? gate.id
+                : gate.logic.toUpperCase()
+          },
+          properties: {},
+          hideChildren: true,
+          ports: []
+        };
+        gate.inputs.forEach((input, i) => {
           gateNet.ports.push({
-            id: gate.id, // + "_output",
+            id: gate.id + "_input_" + i,
+            hwMeta: { name: null },
+            direction: "INPUT",
+            properties: { portSide: "WEST" }
+          });
+          currentNet.edges.push({
+            id: input + " : " + gate.id + "_input_" + i,
+            source: namespace(gate.inputs[i]),
+            sourcePort: gate.inputs[i],
+            target: gate.id + ".gate",
+            targetPort: gate.id + "_input_" + i,
+            hwMeta: { name: null }
+          });
+        });
+        // single output unless response
+        if (gate.logic != "response") {
+          gateNet.ports.push({
+            id: gate.id,
             hwMeta: { name: null },
             direction: "OUTPUT",
             properties: { portSide: "EAST" }
           });
-          currentNet.children.push(gateNet);
-        });
+        }
+        currentNet.children.push(gateNet);
+        console.log("-- Gate: ", gate.id, strip(gateNet));
+      });
 
       // build any sub-instances
       currentInstance.instances.forEach(childInstanceID => {
@@ -101,44 +107,43 @@ export default {
 
         // Build ports for childinstance and connect to currentinstance gates
         childInstance.inputs.forEach(input => {
-          console.log(
-            "---- Port Input: " + input.instanceid + " = " + input.globalid
-          );
+          console.log(`---- Port Input: ${localid(input)} = ${input}`);
           let port = {
-            id: input.instanceid,
-            hwMeta: { name: input.moduleid },
+            id: input,
+            hwMeta: { name: localid(input) },
             direction: "INPUT",
             properties: { portSide: "WEST" }
           };
           childNet.ports.push(port);
-          // currentNet.edges.push({
-          //   id: input.globalid + "_" + port.id,
-          //   hwMeta: { name: null },
-          //   source: currentNet.id,
-          //   sourcePort: input.globalid,
-          //   target: childNet.id,
-          //   targetPort: port.id
-          // });
+          // get the buffer gate for this port
+          const portGate = this.getGate(input);
+          childNet.edges.push({
+            id: portGate.inputs[0] + "_" + input,
+            hwMeta: { name: null },
+            source: portGate.inputs[0] + ".gate",
+            sourcePort: portGate.inputs[0],
+            target: namespace(input),
+            targetPort: input
+          });
         });
         childInstance.outputs.forEach(output => {
-          console.log(
-            `---- Port Output: ${output.instanceid} = ${output.globalid}`
-          );
+          console.log(`---- Port Output: ${localid(output)} = ${output}`);
           let port = {
-            id: output.instanceid + "_output",
-            hwMeta: { name: output.moduleid },
+            id: output,
+            hwMeta: { name: localid(output) },
             direction: "OUTPUT",
             properties: { portSide: "EAST" }
           };
           childNet.ports.push(port);
-          // currentNet.edges.push({
-          //   source: childNet.id,
-          //   sourcePort: port.id,
-          //   target: currentNet.id, // == "main" ? "main_controls" : parent.id,
-          //   targetPort: output.globalid,
-          //   id: port.id + "_" + output.globalid,
-          //   hwMeta: { name: null }
-          // });
+          const portGate = this.getGate(output);
+          childNet.edges.push({
+            id: output + "_" + portGate.inputs[0],
+            source: portGate.inputs[0] + ".gate",
+            sourcePort: portGate.inputs[0],
+            target: namespace(output),
+            targetPort: output,
+            hwMeta: { name: null }
+          });
         });
 
         this.buildInstance(childNet); // add any child instances of this child
@@ -159,13 +164,15 @@ export default {
         children: [],
         edges: []
       };
+
+      const compileResult = vlgCompile(this.parseTree);
+      this.instances = compileResult.instances;
+      this.gates = compileResult.gates;
+      console.log(compileResult);
+
       this.buildInstance(this.elkData);
       log(this.elkData);
       console.log(JSON.stringify(this.elkData));
-
-      // this.elkData = mynet;
-      this.elkData = scratch2;
-
       this.g.bindData(this.elkData);
     },
     zoom() {
@@ -182,14 +189,7 @@ export default {
     zoom.on("zoom", this.zoom);
     svg.call(zoom).on("dblclick.zoom", null);
     // this.g.bindData(this.elkData);
-    // this.buildNetlist();
-    const compileResult = vlgCompile(this.parseTree);
-    this.instances = compileResult.instances;
-    this.gates = compileResult.gates;
-    console.log(compileResult);
-    this.buildNetlist(
-      compileResult.instances[compileResult.instances.length - 1]
-    ); // main instance is the last
+    this.buildNetlist();
   }
 };
 </script>
