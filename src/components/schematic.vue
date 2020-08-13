@@ -5,9 +5,9 @@
 </template>
 
 <script>
-import * as d3 from "d3";
-import { HwSchematic } from "./d3-hwschematic";
-import scratch2 from "./scratch2";
+// import * as d3 from "d3";
+// // import { HwSchematic } from "./d3-hwschematic";
+// import scratch2 from "./scratch2";
 
 import vlgCompile from "./vlgCompile.js";
 
@@ -29,7 +29,9 @@ export default {
   },
   methods: {
     getGate(id) {
-      return this.gates.find(i => i.id == id);
+      let res = this.gates.find(i => i.id == id);
+      if (!res) throw new Error(`getGate(${id}): gate ${id} does not exist`);
+      return res;
     },
     getInstance(id) {
       return this.instances.find(i => i.id == id);
@@ -43,34 +45,54 @@ export default {
 
       // build gates of this instance and edges for each of the gates inputs
       // gate inputs might be another gate or an input port
-      currentInstance.gates.forEach(gateId => {
+      currentInstance.gates.forEach((gateId, gateCount) => {
         const gate = this.getGate(gateId);
+        log(gate);
 
         const gateNet = {
           id: gate.id + ".gate",
           hwMeta: {
+            maxId: currentNet.hwMeta.maxId + 50 + gateCount,
             name:
               gate.logic == "control" ||
               gate.logic == "buffer" ||
               gate.logic == "response"
-                ? gate.id
-                : gate.logic.toUpperCase()
+                ? localid(gate.id)
+                : gate.logic.toUpperCase(),
+            isExternalPort: gate.logic == "control" || gate.logic == "response"
           },
-          properties: {},
+          properties: {
+            "org.eclipse.elk.portConstraints": "FIXED_ORDER",
+            "org.eclipse.elk.randomSeed": 0,
+            "org.eclipse.elk.layered.mergeEdges": 1
+          },
           hideChildren: true,
           ports: []
         };
 
+        // single output unless response
+        if (gate.logic != "response") {
+          gateNet.ports.push({
+            id: gate.id,
+            hwMeta: { name: localid(gate.id) },
+            direction: "OUTPUT",
+            properties: { portSide: "EAST", portIndex: 0 }
+          });
+        }
+
         gate.inputs.forEach((input, i) => {
           gateNet.ports.push({
             id: gate.id + "_input_" + i,
-            hwMeta: { name: null },
+            hwMeta: { name: localid(gate.id) },
             direction: "INPUT",
-            properties: { portSide: "WEST" }
+            properties: {
+              portSide: "WEST",
+              portIndex: gate.inputs.length > 1 ? i + 1 : 0
+            }
           });
 
           currentNet.edges.push({
-            id: input + " : " + gate.id + "_input_" + i,
+            id: input + " : " + gate.id + "_input_" + i + "YYY",
             source: this.gates.some(
               x => x.type == "port" && x.id == gate.inputs[i]
             )
@@ -83,15 +105,6 @@ export default {
           });
         });
 
-        // single output unless response
-        if (gate.logic != "response") {
-          gateNet.ports.push({
-            id: gate.id,
-            hwMeta: { name: null },
-            direction: "OUTPUT",
-            properties: { portSide: "EAST" }
-          });
-        }
         currentNet.children.push(gateNet);
         console.log("-- Gate: ", gate.id, strip(gateNet));
       });
@@ -108,8 +121,10 @@ export default {
             maxID: currentNet.hwMeta.maxId + 100
           },
           properties: {
-            "org.eclipse.elk.portConstraints": "FREE",
-            "org.eclipse.elk.hierarchyHandling": "INCLUDE_CHILDREN"
+            // "org.eclipse.elk.portConstraints": "FREE"
+            "org.eclipse.elk.portConstraints": "FIXED_ORDER",
+            "org.eclipse.elk.randomSeed": 0,
+            "org.eclipse.elk.layered.mergeEdges": 1
           },
           hideChildren: false,
           ports: [],
@@ -117,36 +132,13 @@ export default {
           edges: []
         };
 
-        // Build ports for childinstance and connect to currentinstance gates
-        childInstance.inputs.forEach(input => {
-          console.log(`---- Port Input: ${localid(input)} = ${input}`);
-          let port = {
-            id: input,
-            hwMeta: { name: localid(input) },
-            direction: "INPUT",
-            properties: { portSide: "WEST" }
-          };
-          childNet.ports.push(port);
-
-          // get the buffer gate for this port
-          const portGate = this.getGate(input);
-          childNet.edges.push({
-            id: portGate.inputs[0] + "_" + input,
-            hwMeta: { name: null },
-            source: portGate.inputs[0] + ".gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
-            sourcePort: portGate.inputs[0],
-            target: namespace(input),
-            targetPort: input
-          });
-        });
-
         childInstance.outputs.forEach(output => {
-          console.log(`---- Port Output: ${localid(output)} = ${output}`);
+          // console.log(`---- Port Output: ${localid(output)} = ${output}`);
           let port = {
             id: output,
             hwMeta: { name: localid(output) },
             direction: "OUTPUT",
-            properties: { portSide: "EAST" }
+            properties: { portSide: "EAST", portIndex: 0 }
           };
           childNet.ports.push(port);
 
@@ -156,16 +148,37 @@ export default {
             console.log("Missing ! : ", portGate);
             throw new Error("last gate should end with !");
           }
-          const newEdge = {
+          childNet.edges.push({
             id: output + "_" + portGate.inputs[0],
             source: portGate.inputs[0] + ".gate",
             sourcePort: portGate.inputs[0],
             target: namespace(output),
             targetPort: output,
             hwMeta: { name: null }
+          });
+        });
+
+        // Build ports for childinstance and connect to currentinstance gates
+        childInstance.inputs.forEach((input, i) => {
+          // console.log(`---- Port Input: ${localid(input)} = ${input}`);
+          let port = {
+            id: input,
+            hwMeta: { name: localid(input), level: 0 },
+            direction: "INPUT",
+            properties: { portSide: "WEST", portIndex: i + 1 }
           };
-          // console.log("NEW EDGE: ", newEdge);
-          childNet.edges.push(newEdge);
+          childNet.ports.push(port);
+
+          // get the buffer gate for this port
+          const portGate = this.getGate(input);
+          currentNet.edges.push({
+            id: portGate.inputs[0] + "_" + input + "XXX",
+            hwMeta: { name: null },
+            source: portGate.inputs[0] + ".gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
+            sourcePort: portGate.inputs[0],
+            target: namespace(input),
+            targetPort: input
+          });
         });
 
         this.buildInstance(childNet); // add any child instances of this child
@@ -173,13 +186,13 @@ export default {
       });
     },
     buildNetlist() {
-      // this.buildMain();
       this.elkData = {
         id: "main",
         hwMeta: { name: "main", maxId: 200 },
         properties: {
-          "org.eclipse.elk.portConstraints": "FREE",
-          "org.eclipse.elk.hierarchyHandling": "INCLUDE_CHILDREN"
+          "org.eclipse.elk.portConstraints": "FIXED_ORDER",
+          "org.eclipse.elk.randomSeed": 0,
+          "org.eclipse.elk.layered.mergeEdges": 1
         },
         hideChildren: false,
         ports: [],
@@ -190,11 +203,12 @@ export default {
       const compileResult = vlgCompile(this.parseTree);
       this.instances = compileResult.instances;
       this.gates = compileResult.gates;
-      console.log(compileResult);
+      console.log("compileResult: ", strip(compileResult));
 
       this.buildInstance(this.elkData);
       log(this.elkData);
       console.log(JSON.stringify(this.elkData));
+
       this.g.bindData(this.elkData);
     },
     zoom() {
@@ -204,13 +218,11 @@ export default {
 
   mounted() {
     var svg = d3.select("#svgSchematic");
-    // .attr("width", 600)
-    // .attr("height", 600);
-    this.g = new HwSchematic(svg);
+    this.g = new d3.HwSchematic(svg);
     var zoom = d3.zoom();
     zoom.on("zoom", this.zoom);
     svg.call(zoom).on("dblclick.zoom", null);
-    // this.g.bindData(this.elkData);
+
     this.buildNetlist();
   }
 };

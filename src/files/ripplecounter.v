@@ -13,13 +13,16 @@ module DFF (
   nand( q_, d_nand_c, q);
 endmodule
 
-module main(output count0, count1);
+module main;
 
   wire clock, qn1, qn2;
+  wire count0, count1;
 
   control(clock);
-  buffer(count0);
-  buffer(count1);
+
+  response(count0);
+  response(count1);
+  
   buffer(qn1);
   buffer(qn2);
 

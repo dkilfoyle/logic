@@ -285,7 +285,6 @@ const evaluate = (components, componentLookup) => {
 import BitAdder from "../files/1bitadder.v";
 import DFF from "../files/dff.v";
 import Scratch from "../files/scratch.v";
-import Scratch2 from "../files/scratch2.v";
 import OneHotDecoder from "../files/onehotdecoder.v";
 import SevenSeg from "../files/7seg.v";
 import Mux2_1 from "../files/mux.v";
@@ -324,16 +323,15 @@ export default {
         BitAdder,
         DFF,
         Scratch,
-        Scratch2,
         OneHotDecoder,
         SevenSeg,
         Mux2_1,
         DeMux,
         RippleCounter
       },
-      sourceTab: "Scratch2",
+      sourceTab: "Scratch",
       openFiles: [
-        "Scratch2",
+        "Scratch",
         "OneHotDecoder",
         "SevenSeg",
         "Mux2_1",

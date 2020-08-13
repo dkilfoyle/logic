@@ -449,7 +449,7 @@ const moduleParser = coroutine(function*() {
 
   yield ws(str(";"));
 
-  var wires = yield possibly(ws(wireParser));
+  var wires = yield many(ws(wireParser)).map(x => x.flat());
   wires = wires ? wires : [];
 
   // global

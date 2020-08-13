@@ -74,13 +74,11 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
   instanceModule.statements
     .filter(statement => statement.type == "gate")
     .forEach(gateDeclaration => {
-      // if this gate shares an output id, ie is connected to an output port
-      if (
-        newInstance.outputs.some(x => x == `${namespace}.${gateDeclaration.id}`)
-      )
-        varMap[gateDeclaration.id] = `${namespace}.${gateDeclaration.id}!`;
-      // add ! to indicate last gate before output
-      else varMap[gateDeclaration.id] = `${namespace}.${gateDeclaration.id}`;
+      // if this gate shares an output id, ie is connected to an output port then add ! to indicate last gate before output
+      const newgateID = `${namespace}.${gateDeclaration.id}`;
+      varMap[gateDeclaration.id] = newInstance.outputs.some(x => x == newgateID)
+        ? newgateID + "!"
+        : newgateID;
       const newGate = {
         id: varMap[gateDeclaration.id],
         logic: gateDeclaration.gate,
@@ -94,31 +92,41 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
     });
 
   const evaluateAssignNode = (node, output) => {
-    // console.log(`output: ${output}, Type: ${node.type}`);
+    console.log(`output: ${output}, Type: ${node.type}`);
     let lastOutput;
     if (
       node.type == "BRACKETED_EXPRESSION" ||
       node.type == "ASSIGN_EXPRESSION"
     ) {
       let expr = node.value;
-      // console.log(" -- " + expr.map(x => x.type + ":" + x.value).join(", "));
+      console.log(
+        " -- " +
+          expr.map(x => x.type + ":" + JSON.stringify(x.value)).join(", ")
+      );
 
       // for each operation triplet
       for (let i = 1; i < expr.length; i += 2) {
-        let curOutput = i == expr.length - 2 ? output : output + "op" + i; // final operation, connect to final output
-        if (!varMap[curOutput]) addWire(curOutput);
-        lastOutput = addGate({
-          id: curOutput,
-          gate: expr[i].value,
-          params: [
+        let curOutput = i == expr.length - 2 ? output + "!" : output + "op" + i; // if final operation, connect to output{!}, else a intermediate variable output{op}{i}
+
+        if (!varMap[curOutput]) varMap[curOutput] = `${namespace}.${curOutput}`;
+
+        gates.push({
+          id: varMap[curOutput],
+          logic: expr[i].value,
+          inputs: [
             i == 1
               ? evaluateAssignNode(expr[i - 1], output + "op" + (i - 1))
               : lastOutput,
             evaluateAssignNode(expr[i + 1], output + "op" + (i + 1))
-          ]
+          ],
+          state: 0,
+          type: "gate",
+          instance: instanceDeclaration.id
         });
+        newInstance.gates.push(varMap[curOutput]);
+        lastOutput = curOutput;
       }
-      return lastOutput;
+      return varMap[lastOutput];
     }
 
     if (node.type == "VARIABLE") {
@@ -128,16 +136,25 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
         if (!varMap["not" + lastOutput]) {
           // add a notA wire (if it doesn't already exist)
           // add a gate: not(notA, A)
-          const notA = addWire("not" + lastOutput);
-          addGate({
-            id: "not" + lastOutput,
-            gate: "not",
-            inputs: [lastOutput]
+          const newgateID = `${namespace}.not${lastOutput}`;
+          varMap["not" + lastOutput] = newInstance.outputs.some(
+            x => x == newgateID
+          )
+            ? newgateID + "!"
+            : newgateID;
+          gates.push({
+            id: varMap["not" + lastOutput],
+            logic: "not",
+            inputs: [varMap[lastOutput]],
+            state: 0,
+            type: "gate",
+            instance: instanceDeclaration.id
           });
+          newInstance.gates.push(varMap["not" + lastOutput]);
         }
-        return "not" + lastOutput;
+        return varMap["not" + lastOutput];
       } else {
-        return lastOutput;
+        return varMap[lastOutput];
       }
     }
 
@@ -146,11 +163,11 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
     );
   };
 
-  // instanceModule.statements
-  //   .filter(x => x.type == "assign")
-  //   .forEach(statement => {
-  //     return evaluateAssignNode(statement.value, statement.id);
-  //   });
+  instanceModule.statements
+    .filter(x => x.type == "assign")
+    .forEach(statement => {
+      return evaluateAssignNode(statement.value, statement.id);
+    });
 
   instanceModule.statements
     .filter(x => x.type == "instance")
@@ -168,10 +185,6 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
 
 const compile = parseTree => {
   modules = parseTree.reduce((modules, module) => {
-    if (!module.type == "module") {
-      console.log("top level of ast should be modules only");
-      return modules;
-    }
     modules[module.id] = module;
     return modules;
   }, {});

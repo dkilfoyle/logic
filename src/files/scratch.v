@@ -13,11 +13,11 @@ module MyModule (
   // assign Y = A | b;
 endmodule
 
-module main(
-  output o1, o2);
+module main; // main has no inputs or outputs, instead control and response wires
 
   // wires act as local variables/gates
-  wire user1, user2;
+  wire user1, user2; // control gates
+  wire o1, o2; // response gates
 
   // control is an external button/sensor
   // control state is set in the testbench
@@ -36,8 +36,8 @@ module main(
   );
 
   // foo needs something to wire it's outputs to in main
-  buffer(o1);
-  buffer(o2);
+  response(o1);
+  response(o2);
 
   // main module should have a testbench to set control states
   // format: #time {controlVar=val,...}
