@@ -171,11 +171,7 @@
               :simulationCounter="simulationCounter"
           /></q-tab-panel>
           <q-tab-panel name="schematic" key="schematic"
-            ><schematic
-              ref="schematic"
-              :parseTree="compiled.parseTree"
-              :file="compiled.sourceFile"
-              :simulation="compiled.simulation"
+            ><schematic ref="schematic" :compiled="compiled"
           /></q-tab-panel>
         </q-tab-panels>
       </div>
@@ -190,8 +186,9 @@ import Trace from "../components/trace";
 import Gates from "../components/gates";
 import Schematic from "../components/schematic";
 
-import vlgParser from "../components/vlgParser.js";
-import vlgWalker from "./vlgWalker.js";
+import vlgParser from "../lib/vlgParser.js";
+// import vlgWalker from "../lib/vlgWalker.js";
+import vlgCompiler from "../lib/vlgCompiler.js";
 
 import "xterm/css/xterm.css";
 import { Terminal } from "xterm";
@@ -199,7 +196,6 @@ import { FitAddon } from "xterm-addon-fit";
 
 // import { Chalk } from "chalk";
 const Chalk = require("chalk");
-
 let options = { enabled: true, level: 2 };
 const chalk = new Chalk.Instance(options);
 const shortJoin = strs => {
@@ -207,6 +203,7 @@ const shortJoin = strs => {
   if (x.length < 21) return x;
   else return x.slice(0, 40) + "...";
 };
+const stripReactive = x => JSON.parse(JSON.stringify(x));
 
 const indexBy = (array, prop) =>
   array.reduce((output, item) => {
@@ -381,7 +378,7 @@ export default {
       );
 
       const parse = vlgParser(this.source[this.sourceTab]).parseState;
-      console.log("Parse: ", parse);
+      console.log("Parse: ", stripReactive(parse));
       if (parse.isError) {
         this.compiled.state = "error";
         this.termWriteln(chalk.red("└── Parser error: ") + parse.error);
@@ -398,10 +395,15 @@ export default {
         )
       );
 
-      const walk = vlgWalker(this.compiled.parseTree);
-      console.log("Walk: ", walk);
-      this.compiled.instances = [...walk.instances];
-      this.compiled.gates = [...walk.gates];
+      // const walk = vlgWalker(this.compiled.parseTree);
+      const walk = vlgCompiler(this.compiled.parseTree);
+      console.log("Walk: ", stripReactive(walk));
+
+      this.$set(this.compiled, "instances", walk.instances);
+      this.$set(this.compiled, "gates", walk.gates);
+
+      // this.compiled.instances = walk.instances.slice(); //[...walk.instances];
+      // this.compiled.gates = walk.gates.slice(); //[...walk.gates];
 
       this.termWriteln(
         chalk.green(

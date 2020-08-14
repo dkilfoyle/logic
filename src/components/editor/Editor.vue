@@ -24,8 +24,8 @@ import "codemirror/addon/fold/foldcode.js";
 import "codemirror/addon/fold/foldgutter.js";
 import "codemirror/addon/fold/foldgutter.css";
 
-import vlgParser from "../vlgParser.js";
-import vlgMode from "./vlgMode.js";
+import vlgParser from "../../lib/vlgParser.js";
+import vlgMode from "../../lib/vlgMode.js";
 
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/monokai.css";

@@ -22,9 +22,9 @@ export default {
 
       switch (this.showWhichGates) {
         case "all":
-          return [...instance.inputs, ...instance.wires, ...instance.outputs];
+          return [...instance.inputs, ...instance.gates, ...instance.outputs];
         case "wires":
-          return [...instance.wires];
+          return [...instance.gates];
         case "outputs":
           return [...instance.outputs];
         case "inputs":
@@ -34,7 +34,7 @@ export default {
     },
     allInstanceGates: function() {
       var instance = this.selectedInstance;
-      return [...instance.inputs, ...instance.wires, ...instance.outputs];
+      return [...instance.inputs, ...instance.gates, ...instance.outputs];
     }
   },
   methods: {
@@ -43,6 +43,9 @@ export default {
     },
     getInstance: function(id) {
       return this.instances.find(x => x.id == id);
+    },
+    getLocalId: function(x) {
+      return x.substr(x.lastIndexOf(".") + 1);
     }
   }
 };

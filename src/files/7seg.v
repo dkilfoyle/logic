@@ -30,9 +30,9 @@ module SevenSeg(
   assign Fg = (~A & B)  | (A & ~C) | (A & ~B);
 endmodule
 
-module main(
-  output Fa, Fb, Fc, Fd, Fe, Ff, Fg);
+module main;
 
+  wire Fa, Fb, Fc, Fd, Fe, Ff, Fg;
   wire a, b, c;
 
   control(a);
@@ -52,13 +52,13 @@ module main(
     .Fg(Fg)
   );
 
-  buffer(Fa);
-  buffer(Fb);
-  buffer(Fc);
-  buffer(Fd);
-  buffer(Fe);
-  buffer(Ff);
-  buffer(Fg);
+  response(Fa);
+  response(Fb);
+  response(Fc);
+  response(Fd);
+  response(Fe);
+  response(Ff);
+  response(Fg);
 
   test begin
     #00 {a=0, b=0, c=0}; // should get 1 1 1 1 1 1 0

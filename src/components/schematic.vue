@@ -1,47 +1,70 @@
 <template>
   <div>
-    <svg ref="svgSchematic" id="svgSchematic" height="600" width="100%" />
+    <svg ref="svgSchematic" id="svgSchematic" height="70vh" width="100%" />
   </div>
 </template>
 
 <script>
 // import * as d3 from "d3";
-// // import { HwSchematic } from "./d3-hwschematic";
-// import scratch2 from "./scratch2";
+// import { HwSchematic } from "./d3-hwschematic";
 
-import vlgCompile from "./vlgCompile.js";
-
-const strip = x => JSON.parse(JSON.stringify(x));
-const log = x => console.log(strip(x));
+const stripReactive = x => JSON.parse(JSON.stringify(x));
+const log = x => console.log(stripReactive(x));
 const localid = x => x.substr(x.lastIndexOf(".") + 1);
 const namespace = x => x.substr(0, x.lastIndexOf("."));
 
 export default {
   // name: 'ComponentName',
-  props: ["parseTree"],
+  props: ["compiled"],
   data() {
-    return { elkData: {}, g: {}, instances: [], gates: [] };
+    return { elkData: {}, g: {} };
   },
   watch: {
-    parseTree(newval) {
-      this.buildNetlist();
+    compiled: {
+      handler() {
+        this.$nextTick(() => this.buildNetlist());
+      },
+      immediate: true,
+      deep: true
     }
   },
   methods: {
     getGate(id) {
-      let res = this.gates.find(i => i.id == id);
+      let res = this.compiled.gates.find(i => i.id == id);
       if (!res) throw new Error(`getGate(${id}): gate ${id} does not exist`);
       return res;
     },
     getInstance(id) {
-      return this.instances.find(i => i.id == id);
+      return this.compiled.instances.find(i => i.id == id);
     },
-    isInputPort(id) {
-      this.getInstance();
+
+    buildNetlist() {
+      this.elkData = {
+        id: "main",
+        hwMeta: { name: "main", maxId: 200 },
+        properties: {
+          "org.eclipse.elk.portConstraints": "FIXED_ORDER",
+          "org.eclipse.elk.randomSeed": 0,
+          "org.eclipse.elk.layered.mergeEdges": 1
+        },
+        hideChildren: false,
+        ports: [],
+        children: [],
+        edges: []
+      };
+
+      this.buildInstance(this.elkData);
+      log(this.elkData);
+      console.log(JSON.stringify(this.elkData));
+      this.g.bindData(this.elkData);
     },
     buildInstance(currentNet) {
       const currentInstance = this.getInstance(currentNet.id);
-      console.log("Building ", currentInstance.id, strip(currentInstance));
+      console.log(
+        "Building ",
+        currentInstance.id,
+        stripReactive(currentInstance)
+      );
 
       // build gates of this instance and edges for each of the gates inputs
       // gate inputs might be another gate or an input port
@@ -92,8 +115,8 @@ export default {
           });
 
           currentNet.edges.push({
-            id: input + " : " + gate.id + "_input_" + i + "YYY",
-            source: this.gates.some(
+            id: input + " : " + gate.id + "_input_" + i + "YYYY",
+            source: this.compiled.gates.some(
               x => x.type == "port" && x.id == gate.inputs[i]
             )
               ? namespace(gate.inputs[i])
@@ -106,7 +129,7 @@ export default {
         });
 
         currentNet.children.push(gateNet);
-        console.log("-- Gate: ", gate.id, strip(gateNet));
+        console.log("-- Gate: ", gate.id, stripReactive(gateNet));
       });
 
       // build any sub-instances
@@ -144,13 +167,16 @@ export default {
 
           // get the buffer gate for this port the input to which is the final gate (gate!)
           const portGate = this.getGate(output);
-          if (!portGate.inputs[0].indexOf("!")) {
-            console.log("Missing ! : ", portGate);
-            throw new Error("last gate should end with !");
-          }
+
+          console.log(portGate);
+
+          var bangGate = portGate.inputs[0].includes("!");
+
           childNet.edges.push({
-            id: output + "_" + portGate.inputs[0],
-            source: portGate.inputs[0] + ".gate",
+            id: output + "_" + portGate.inputs[0] + "ZZZ",
+            source: bangGate
+              ? portGate.inputs[0] + ".gate"
+              : namespace(portGate.inputs[0]),
             sourcePort: portGate.inputs[0],
             target: namespace(output),
             targetPort: output,
@@ -174,7 +200,9 @@ export default {
           currentNet.edges.push({
             id: portGate.inputs[0] + "_" + input + "XXX",
             hwMeta: { name: null },
-            source: portGate.inputs[0] + ".gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
+            source: currentInstance.inputs.some(x => x == portGate.inputs[0]) // is the input to the port gate itself a port of the parent instance rather than a local gate
+              ? currentInstance.id
+              : portGate.inputs[0] + ".gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
             sourcePort: portGate.inputs[0],
             target: namespace(input),
             targetPort: input
@@ -185,32 +213,7 @@ export default {
         currentNet.children.push(childNet);
       });
     },
-    buildNetlist() {
-      this.elkData = {
-        id: "main",
-        hwMeta: { name: "main", maxId: 200 },
-        properties: {
-          "org.eclipse.elk.portConstraints": "FIXED_ORDER",
-          "org.eclipse.elk.randomSeed": 0,
-          "org.eclipse.elk.layered.mergeEdges": 1
-        },
-        hideChildren: false,
-        ports: [],
-        children: [],
-        edges: []
-      };
 
-      const compileResult = vlgCompile(this.parseTree);
-      this.instances = compileResult.instances;
-      this.gates = compileResult.gates;
-      console.log("compileResult: ", strip(compileResult));
-
-      this.buildInstance(this.elkData);
-      log(this.elkData);
-      console.log(JSON.stringify(this.elkData));
-
-      this.g.bindData(this.elkData);
-    },
     zoom() {
       this.g.root.attr("transform", d3.event.transform);
     }
@@ -223,7 +226,7 @@ export default {
     zoom.on("zoom", this.zoom);
     svg.call(zoom).on("dblclick.zoom", null);
 
-    this.buildNetlist();
+    // this.buildNetlist();
   }
 };
 </script>
