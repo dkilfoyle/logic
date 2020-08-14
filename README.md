@@ -17,6 +17,7 @@ quasar dev
 2. CodeMirror-based code editor with automatic linting/error reporting, smart indentation, code folding, hints
 3. Visualisation of the generated gate array by hierachical table or a (experimental toy really) dagre graph
 4. Testbench simulation with graphical trace output
+5. Coming soon: d3-hwschematic view with simulation state animation
 
 ## DSL
 
@@ -93,3 +94,4 @@ quasar dev
 4. [G6 Graph](https://g6.antv.vision/en/)
 5. [CodeMirror](https://codemirror.net/)
 6. [Dygraphs](https://www.dygraphs.com/)
+7. [d3-hwschematic](https://github.com/Nic30/d3-hwschematic)
