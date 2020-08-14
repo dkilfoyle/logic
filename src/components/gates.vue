@@ -31,17 +31,18 @@
               </thead>
 
               <tbody>
-                <tr v-for="g in selectedGates" :key="g.globalid">
-                  <td>{{ g.globalid }}</td>
+                <tr v-for="g in selectedGates" :key="g">
+                  <td>{{ g }}</td>
                   <!-- <td>{{ g.instanceid }}</td> -->
-                  <td>{{ getGate(g.globalid).logic }}</td>
-                  <td>{{ getGate(g.globalid).inputs.join(", ") }}</td>
-                  <td class="text-right">{{ getGate(g.globalid).state }}</td>
+                  <td>{{ getGate(g).logic }}</td>
+                  <td>{{ getGate(g).inputs.join(", ") }}</td>
+                  <td class="text-right">{{ getGate(g).state }}</td>
                 </tr>
               </tbody>
             </q-markup-table>
           </div></q-scroll-area
         >
+        <p>{{ selectedGates }}</p>
       </div>
     </div>
   </div>

@@ -18,11 +18,10 @@ module SingleStage (
 
 endmodule
 
-module main(
-  output sum,
-  output cout);
+module main;
 
   wire a, b, cin;
+  wire sum, cout;
 
   control(a);
   control(b);
@@ -36,8 +35,8 @@ module main(
 		.cout(cout)
   );
 
-  buffer(sum);
-  buffer(cout);
+  response(sum);
+  response(cout);
 
 	test begin
 		#0  {a=0, b=0, cin=0};
@@ -49,5 +48,6 @@ module main(
     #12 {a=1, b=0, cin=1};
     #14 {a=1, b=1, cin=0};
     #16 {a=1, b=1, cin=1};
+    #18;
 	end
 endmodule

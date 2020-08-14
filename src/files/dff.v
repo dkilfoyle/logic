@@ -3,43 +3,42 @@
 module DFF (
 	input clk,
 	input dIn,
-	output q);
+	output q3);
 
 	wire not_d_in, d_nand_a, d_nand_c, q_;
 
 	not( not_d_in, dIn );
 	nand( d_nand_a, dIn, clk );
-	nand( q, d_nand_a, q_ );
+	nand( q3, d_nand_a, q_ );
 	nand( d_nand_c, not_d_in, clk );
-  nand( q_, d_nand_c, q);
+  nand( q_, d_nand_c, q3);
 endmodule
 
 module DFFE (
   input clk,
   input dIn,
   input dEnable,
-  output q);
+  output q2);
 
-  wire gatedClk, dInB;
-  and( gatedClk, clk, dEnable );
-  buffer( dInB, dIn) ;
+  wire gatedClk;
+  and(gatedClk, clk, dEnable);
+  
+  DFF dff(.clk(gatedClk), .dIn(dIn), .q3(q2));
 
-  DFF dff( .clk(gatedClk), .dIn(dInB), .q(q));
 
-  buffer(q);
 endmodule
 
-module main(output q);
+module main;
 
-  wire A, E, clock;
+  wire A, E, clock, q1;
 
   control(A);
   control(E);
   control(clock);
 
-  DFFE dffe(.clk(clock), .dIn(A), .dEnable(E), .q(q));
+  DFFE dffe(.clk(clock), .dIn(A), .dEnable(E), .q2(q1));
 
-  buffer(q);
+  response(q1);
 
   test begin
     #0  { E=1 };

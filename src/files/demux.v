@@ -16,18 +16,19 @@ module DeMux (
   assign Z = sel & a;
 endmodule
 
-module main(output Y, Z);
+module main;
+  wire Y, Z;
   wire clock, sel;
 
   control(sel);
   control(clock); // "clock" is controlled automatically during test
 
   DeMux demux(.a(clock), .sel(sel), .Y(Y), .Z(Z));
-  buffer(Y);
-  buffer(Z);
+  response(Y);
+  response(Z);
 
   test begin
-    #01 {sel=0};  
+    #001 {sel=0};  
     #010 {sel=1}; 
     #020;
   end

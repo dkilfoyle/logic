@@ -20,15 +20,16 @@ module Mux2_1 (
 	assign F = (~sel & a) | (sel & b);
 endmodule
 
-module main(output F);
+module main;
   wire a, b, sel;
+  wire F;
 
   control(a);
   control(b);
   control(sel);
 
   Mux2_1 mux(.a(a), .b(b), .sel(sel), .F(F));
-  buffer(F);
+  response(F);
 
   test begin
     #01 {sel=0, a=0, b=0}; // expect 0 

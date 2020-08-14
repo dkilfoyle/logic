@@ -32,10 +32,11 @@ module OneHotDecoder (
   and(F3, a, b);
 endmodule
 
-module main(
-  output F3, F2, F1, F0);
+module main;
 
-  wire a, b;
+  wire a, b; // controls
+  wire F3, F2, F1, F0; // response
+
   control(a);
   control(b);
 
@@ -49,10 +50,10 @@ module main(
 		.F0(F0)
   );
 
-  buffer(F3);
-  buffer(F2);
-  buffer(F1);
-  buffer(F0);
+  response(F3);
+  response(F2);
+  response(F1);
+  response(F0);
 
   test begin
 		#0  {a=0, b=0};

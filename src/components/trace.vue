@@ -21,20 +21,16 @@
 
         <div v-if="selectedInstance">
           <q-scroll-area style="height:70vh">
-            <div
-              class="row q-pb-sm"
-              v-for="g in selectedGates"
-              :key="g.globalid"
-            >
+            <div class="row q-pb-sm" v-for="g in selectedGates" :key="g">
               <div class="col-10">
                 <dygraph
-                  :data="tracedata(g.globalid)"
-                  :options="traceOptions(g.globalid)"
+                  :data="tracedata(g)"
+                  :options="traceOptions(g)"
                   ref="traces"
                 ></dygraph>
               </div>
               <div class="col-2">
-                <div class="text-caption">{{ g.instanceid }}</div>
+                <div class="text-caption">{{ getLocalId(g) }}</div>
               </div>
             </div>
             <div class="row q-pt-lg">
@@ -128,9 +124,9 @@ export default {
       };
     },
     traceColor: function(id) {
-      if (this.selectedInstance.outputs.some(x => x.globalid == id))
+      if (this.selectedInstance.outputs.some(x => x == id))
         return "rgb(255,99,132)";
-      if (this.selectedInstance.inputs.some(x => x.globalid == id)) {
+      if (this.selectedInstance.inputs.some(x => x == id)) {
         return "steelblue";
       }
 

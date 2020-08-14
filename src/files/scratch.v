@@ -10,16 +10,18 @@ module MyModule (
 
   // alternative bitwise format
   // assign X = a & b;
+  // assign Y = A | b;
 endmodule
 
-module main(
-  output o1, o2);
+module main; // main has no inputs or outputs, instead control and response wires
 
   // wires act as local variables/gates
-  wire user1, user2, cin;
+  wire user1, user2; // control gates
+  wire o1, o2; // response gates
 
   // control is an external button/sensor
   // control state is set in the testbench
+  // only module main can have control wires
   control(user1);
   control(user2);
 
@@ -29,13 +31,13 @@ module main(
   MyModule foo(
 		.a(user1),
 		.b(user2),
-		.x(o1),
-		.y(o2)
+		.X(o1),
+		.Y(o2)
   );
 
   // foo needs something to wire it's outputs to in main
-  buffer(o1);
-  buffer(o2);
+  response(o1);
+  response(o2);
 
   // main module should have a testbench to set control states
   // format: #time {controlVar=val,...}

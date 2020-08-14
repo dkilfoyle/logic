@@ -27,6 +27,13 @@
             icon="electrical_services"
             :disable="!compiled.gates.length"
           ></q-tab>
+
+          <q-tab
+            name="schematic"
+            label="Schematic2"
+            icon="electrical_services"
+            :disable="!compiled.gates.length"
+          ></q-tab>
         </q-tabs>
 
         <q-tab-panels
@@ -163,6 +170,9 @@
               :simulation="compiled.simulation"
               :simulationCounter="simulationCounter"
           /></q-tab-panel>
+          <q-tab-panel name="schematic" key="schematic"
+            ><schematic ref="schematic" :compiled="compiled"
+          /></q-tab-panel>
         </q-tab-panels>
       </div>
     </div>
@@ -174,9 +184,11 @@ import Editor from "../components/editor/Editor";
 import Graph from "../components/graph";
 import Trace from "../components/trace";
 import Gates from "../components/gates";
+import Schematic from "../components/schematic";
 
-import vlgParser from "../components/vlgParser.js";
-import vlgWalker from "./vlgWalker.js";
+import vlgParser from "../lib/vlgParser.js";
+// import vlgWalker from "../lib/vlgWalker.js";
+import vlgCompiler from "../lib/vlgCompiler.js";
 
 import "xterm/css/xterm.css";
 import { Terminal } from "xterm";
@@ -184,7 +196,6 @@ import { FitAddon } from "xterm-addon-fit";
 
 // import { Chalk } from "chalk";
 const Chalk = require("chalk");
-
 let options = { enabled: true, level: 2 };
 const chalk = new Chalk.Instance(options);
 const shortJoin = strs => {
@@ -192,6 +203,7 @@ const shortJoin = strs => {
   if (x.length < 21) return x;
   else return x.slice(0, 40) + "...";
 };
+const stripReactive = x => JSON.parse(JSON.stringify(x));
 
 const indexBy = (array, prop) =>
   array.reduce((output, item) => {
@@ -204,6 +216,7 @@ const not = x => ~x & 1;
 const logicFunctions = {
   not: a => ~a & 1,
   buffer: a => a,
+  response: a => a,
   and2: (a, b) => a && b,
   nand2: (a, b) => not(a && b),
   or2: (a, b) => a || b,
@@ -222,7 +235,7 @@ const evaluate = (components, componentLookup) => {
   const logicOperation = component => {
     let logicFn = component.logic;
     if (component.inputs.length == 1) {
-      if (!(logicFn == "not" || logicFn == "buffer")) {
+      if (!(logicFn == "not" || logicFn == "buffer" || logicFn == "response")) {
         console.log(
           "Gate evaluation error - 1 input only valid for not and buffer gates"
         );
@@ -283,7 +296,8 @@ export default {
     Editor,
     Graph,
     Gates,
-    Trace
+    Trace,
+    Schematic
   },
   data() {
     return {
@@ -312,14 +326,15 @@ export default {
         DeMux,
         RippleCounter
       },
-      sourceTab: "RippleCounter",
+      sourceTab: "Scratch",
       openFiles: [
         "Scratch",
         "OneHotDecoder",
         "SevenSeg",
         "Mux2_1",
         "DeMux",
-        "RippleCounter"
+        "RippleCounter",
+        "BitAdder"
       ],
       errors: {}
     };
@@ -363,7 +378,7 @@ export default {
       );
 
       const parse = vlgParser(this.source[this.sourceTab]).parseState;
-      console.log("Parse: ", parse);
+      console.log("Parse: ", stripReactive(parse));
       if (parse.isError) {
         this.compiled.state = "error";
         this.termWriteln(chalk.red("└── Parser error: ") + parse.error);
@@ -380,10 +395,15 @@ export default {
         )
       );
 
-      const walk = vlgWalker(this.compiled.parseTree);
-      console.log("Walk: ", walk);
-      this.compiled.instances = [...walk.instances];
-      this.compiled.gates = [...walk.gates];
+      // const walk = vlgWalker(this.compiled.parseTree);
+      const walk = vlgCompiler(this.compiled.parseTree);
+      console.log("Walk: ", stripReactive(walk));
+
+      this.$set(this.compiled, "instances", walk.instances);
+      this.$set(this.compiled, "gates", walk.gates);
+
+      // this.compiled.instances = walk.instances.slice(); //[...walk.instances];
+      // this.compiled.gates = walk.gates.slice(); //[...walk.gates];
 
       this.termWriteln(
         chalk.green(

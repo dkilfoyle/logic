@@ -189,7 +189,7 @@ const variableParser = coroutine(function*() {
 const instanceParamsParser = coroutine(function*() {
   const instanceVar = yield sequenceOf([str("."), identifier]).map(x => x[1]);
   const moduleVar = yield betweenRoundBrackets(variableParser);
-  return { param: instanceVar, mapped: moduleVar };
+  return { port: instanceVar, value: moduleVar };
 });
 
 const instanceParser = coroutine(function*() {
@@ -197,7 +197,7 @@ const instanceParser = coroutine(function*() {
   const start = yield tapPosition;
   const module = yield ws(identifier).errorMap(x => "no module");
   const id = yield ws(identifier).errorMap(x => "no id");
-  const params = yield betweenRoundBrackets(
+  const parameters = yield betweenRoundBrackets(
     commaSeparated(ws(instanceParamsParser))
   );
   yield str(";");
@@ -206,7 +206,7 @@ const instanceParser = coroutine(function*() {
     yield lintWarningParser("Module " + module + " not defined", "warning", {
       from: start
     });
-  return { type: "instance", module, id, params };
+  return { type: "instance", module, id, parameters };
 });
 
 // Gate parser ===========================================================
@@ -220,16 +220,44 @@ const gateParser = coroutine(function*() {
     str("nor"),
     str("not"),
     str("control"),
-    str("buffer")
+    str("buffer"),
+    str("response")
   ]);
+
+  const start = yield tapPosition;
 
   const params = yield betweenRoundBrackets(
     commaSeparated(definedVariableParser)
   );
 
+  if (["control", "buffer", "response"].includes(gate) && params.length != 1) {
+    yield lintWarningParser(
+      `'${gate}' expects exactly 1 parameter`,
+      "warning",
+      {
+        from: start
+      }
+    );
+  }
+
+  if (["and", "nand", "or", "xor", "nor"].includes(gate) && params.length < 3) {
+    yield lintWarningParser(
+      `'${gate}' expects at least 3 parameters`,
+      "warning",
+      {
+        from: start
+      }
+    );
+  }
+
   yield ws(str(";"));
 
-  return { type: "gate", id: params[0], gate, params: params.slice(1) };
+  return {
+    type: "gate",
+    id: params[0],
+    gate,
+    inputs: params.slice(1)
+  };
 });
 
 // Assign parser ======================================================
@@ -416,11 +444,12 @@ const moduleParser = coroutine(function*() {
     betweenRoundBrackets(
       commaSeparated(portParser.errorMap(lintError("Invalid ports section")))
     ).map(x => x.flat())
-  );
+  ).map(x => x || []);
+  // ports = ports || [];
 
   yield ws(str(";"));
 
-  var wires = yield possibly(ws(wireParser));
+  var wires = yield many(ws(wireParser)).map(x => x.flat());
   wires = wires ? wires : [];
 
   // global
