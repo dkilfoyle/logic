@@ -220,7 +220,12 @@ export default {
   },
 
   mounted() {
-    var svg = d3.select("#svgSchematic");
+    const width = this.$refs.svgSchematic.clientWidth;
+    const height = this.$refs.svgSchematic.clientHeight;
+    var svg = d3
+      .select("#svgSchematic")
+      .attr("width", width)
+      .attr("height", height);
     this.g = new d3.HwSchematic(svg);
     var zoom = d3.zoom();
     zoom.on("zoom", this.zoom);
@@ -291,15 +296,16 @@ text {
 }
 
 .link-wrap-activated {
-  stroke-width: 8;
+  stroke-width: 4;
   fill: none;
   stroke: deepskyblue;
 }
 
 .link-wrap {
-  stroke-width: 8;
+  stroke-width: 4;
   fill: none;
-  /* stroke: white; */
+  stroke: white;
+  opacity: 0;
 }
 
 .port {
