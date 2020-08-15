@@ -19,7 +19,7 @@
             name="trace"
             icon="timeline"
             label="Trace"
-            :disable="!compiled.gates.length"
+            :disable="!compiled.simulation.ready"
           ></q-tab>
           <q-tab
             name="graph"
@@ -312,10 +312,9 @@ export default {
         parseTree: { lint: [] },
         gates: [],
         instances: [],
-        simulation: { gates: {}, time: [], maxTime: 0 }
+        simulation: { ready: false, gates: {}, time: [], maxTime: 0 }
       },
       tab: "code",
-      layout: "dagre",
       source: {
         BitAdder,
         DFF,
@@ -426,6 +425,7 @@ export default {
       );
 
       newCompiled.timestamp = Date.now();
+      newCompiled.simulation = { ready: false };
       this.compiled = newCompiled; // do it this way so that Vue does not propogate reactive changes until this.compiled is fully updated
     },
     onNodeClick(nodeid, clock) {
@@ -452,7 +452,8 @@ export default {
       const newSimulation = {
         gates: {},
         clock: [],
-        time: []
+        time: [],
+        ready: false
       };
 
       this.compiled.gates.forEach(g => {
@@ -520,6 +521,7 @@ export default {
       );
       newSimulation.maxTime = newSimulation.time[newSimulation.time.length - 1];
       newSimulation.timestamp = Date.now();
+      newSimulation.ready = true;
       this.compiled.simulation = newSimulation;
       console.log("Simulation: ", this.stripReactive(this.compiled.simulation));
     }
