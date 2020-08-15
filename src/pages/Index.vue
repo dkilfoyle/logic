@@ -170,7 +170,13 @@
               :simulation="compiled.simulation"
           /></q-tab-panel>
           <q-tab-panel name="schematic" key="schematic"
-            ><schematic ref="schematic" :compiled="compiled"
+            ><schematic
+              ref="schematic"
+              @nodeClick="onNodeClick"
+              :file="compiled.sourceFile"
+              :gates="compiled.gates"
+              :instances="compiled.instances"
+              :simulation="compiled.simulation"
           /></q-tab-panel>
         </q-tab-panels>
       </div>

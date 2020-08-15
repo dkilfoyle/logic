@@ -13,13 +13,13 @@ import UtilsMixin from "../mixins/utils";
 
 export default {
   // name: 'ComponentName',
-  props: ["compiled"],
+  props: ["gates", "instances", "simulation"],
   mixins: [UtilsMixin],
   data() {
     return { elkData: {}, g: {} };
   },
   watch: {
-    compiled: {
+    gates: {
       handler() {
         this.$nextTick(() => this.buildNetlist());
       },
@@ -32,12 +32,12 @@ export default {
       console.log(this.g.root);
     },
     getGate(id) {
-      let res = this.compiled.gates.find(i => i.id == id);
+      let res = this.gates.find(i => i.id == id);
       if (!res) throw new Error(`getGate(${id}): gate ${id} does not exist`);
       return res;
     },
     getInstance(id) {
-      return this.compiled.instances.find(i => i.id == id);
+      return this.instances.find(i => i.id == id);
     },
 
     buildNetlist() {
@@ -62,7 +62,7 @@ export default {
       this.g.bindData(this.elkData).then(() => {
         // add click handlers to all non-port gates
         console.log("buildNetList1: ", this.g.root);
-        this.compiled.instances.forEach(instance =>
+        this.instances.forEach(instance =>
           instance.gates.forEach(gateId => {
             const node = this.g.root.select("#node-id-" + gateId + "_gate");
             node.on("click", d => console.log(d.id));
@@ -129,7 +129,7 @@ export default {
           currentNet.edges.push({
             id: input + "-" + gate.id + "_input_" + i,
             type: "gate2gate",
-            source: this.compiled.gates.some(
+            source: this.gates.some(
               x => x.type == "port" && x.id == gate.inputs[i]
             )
               ? this.getNamespace(gate.inputs[i]) // if the gate input is a port then source is the instance,
