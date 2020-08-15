@@ -13,7 +13,7 @@
               ></q-checkbox>
             </div>
             <div
-              v-if="simulation.time.length > 0"
+              v-show="simulation.ready > 0"
               class="row items-center q-gutter-x-md"
             >
               <div>Simulation:</div>
