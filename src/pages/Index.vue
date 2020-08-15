@@ -23,14 +23,14 @@
           ></q-tab>
           <q-tab
             name="graph"
-            label="Schematic"
+            label="Graph"
             icon="electrical_services"
             :disable="!compiled.gates.length"
           ></q-tab>
 
           <q-tab
             name="schematic"
-            label="Schematic2"
+            label="Schematic"
             icon="electrical_services"
             :disable="!compiled.gates.length"
           ></q-tab>
@@ -46,7 +46,7 @@
         >
           <q-tab-panel name="code" key="code" class="q-gutter-md">
             <div class="row">
-              <q-card class="col">
+              <div class="col">
                 <q-toolbar class="bg-grey-4 filetabs">
                   <q-tabs
                     v-for="file in openFiles"
@@ -107,12 +107,12 @@
                       @parsed="onParsed(file, $event)"
                   /></q-tab-panel>
                 </q-tab-panels>
-              </q-card>
+              </div>
             </div>
             <!-- <div class="q-gutter-md"> -->
             <!-- <q-card> -->
             <div class="row">
-              <q-card class="col">
+              <q-card class="col" bordered>
                 <!-- <q-separator></q-separator> -->
                 <q-card-section>
                   <div class="row q-gutter-md q-pb-md">
@@ -168,7 +168,6 @@
               :gates="compiled.gates"
               :instances="compiled.instances"
               :simulation="compiled.simulation"
-              :simulationCounter="simulationCounter"
           /></q-tab-panel>
           <q-tab-panel name="schematic" key="schematic"
             ><schematic ref="schematic" :compiled="compiled"
@@ -203,7 +202,6 @@ const shortJoin = strs => {
   if (x.length < 21) return x;
   else return x.slice(0, 40) + "...";
 };
-const stripReactive = x => JSON.parse(JSON.stringify(x));
 
 const indexBy = (array, prop) =>
   array.reduce((output, item) => {
@@ -289,9 +287,11 @@ import DeMux from "../files/demux.v";
 import RippleCounter from "../files/ripplecounter.v";
 
 import Vue from "vue";
+import UtilsMixin from "../mixins/utils";
 
 export default {
-  name: "PageIndex",
+  name: "Index",
+  mixins: [UtilsMixin],
   components: {
     Editor,
     Graph,
@@ -305,8 +305,8 @@ export default {
       terminal: {},
       showTerminal: true,
       fitAddon: {},
-      simulationCounter: 0,
       compiled: {
+        timestamp: null,
         state: "uncompiled",
         sourceFile: "",
         parseTree: { lint: [] },
@@ -372,52 +372,51 @@ export default {
 
     compile() {
       this.showTerminal = true;
-      this.compiled.sourceFile = this.sourceTab;
+
+      const newCompiled = {};
+      newCompiled.sourceFile = this.sourceTab;
       this.termWriteln(
         chalk.bold.green("• Compiling: ") + chalk.yellow(this.sourceTab)
       );
 
       const parse = vlgParser(this.source[this.sourceTab]).parseState;
-      console.log("Parse: ", stripReactive(parse));
+      console.log("Parse: ", this.stripReactive(parse));
       if (parse.isError) {
-        this.compiled.state = "error";
+        newCompiled.state = "error";
         this.termWriteln(chalk.red("└── Parser error: ") + parse.error);
         return;
       }
 
-      this.compiled.state = "success";
-      this.compiled.parseTree = parse.result;
+      newCompiled.state = "success";
+      newCompiled.parseTree = parse.result;
       this.termWriteln(
         chalk.green(
-          `├── Parsed ${this.compiled.parseTree.length} modules: ${chalk.white(
-            this.compiled.parseTree.map(x => x.id).join(", ")
+          `├── Parsed ${newCompiled.parseTree.length} modules: ${chalk.white(
+            newCompiled.parseTree.map(x => x.id).join(", ")
           )}`
         )
       );
 
-      // const walk = vlgWalker(this.compiled.parseTree);
-      const walk = vlgCompiler(this.compiled.parseTree);
-      console.log("Walk: ", stripReactive(walk));
+      // const walk = vlgWalker(newCompiled.parseTree);
+      const walk = vlgCompiler(newCompiled.parseTree);
+      console.log("Compiled: ", this.stripReactive(walk));
 
-      this.$set(this.compiled, "instances", walk.instances);
-      this.$set(this.compiled, "gates", walk.gates);
-
-      // this.compiled.instances = walk.instances.slice(); //[...walk.instances];
-      // this.compiled.gates = walk.gates.slice(); //[...walk.gates];
+      newCompiled.instances = [...walk.instances];
+      newCompiled.gates = [...walk.gates];
 
       this.termWriteln(
         chalk.green(
           `├── Generated ${
-            this.compiled.instances.length
+            newCompiled.instances.length
           } instances: ${chalk.white(
-            shortJoin(this.compiled.instances.map(x => x.id))
+            shortJoin(newCompiled.instances.map(x => x.id))
           )}`
         )
       );
       this.termWriteln(
         chalk.green(
-          `└── Generated ${this.compiled.gates.length} gates: ${chalk.white(
-            shortJoin(this.compiled.gates.map(x => x.id))
+          `└── Generated ${newCompiled.gates.length} gates: ${chalk.white(
+            shortJoin(newCompiled.gates.map(x => x.id))
           )}`
         )
       );
@@ -425,6 +424,9 @@ export default {
       this.termWriteln(
         chalk.green.inverse(" DONE ") + "  Compiled successfully"
       );
+
+      newCompiled.timestamp = Date.now();
+      this.compiled = newCompiled; // do it this way so that Vue does not propogate reactive changes until this.compiled is fully updated
     },
     onNodeClick(nodeid, clock) {
       // the user clicked a node in the graph, if it is a control node toggle its value and re-run the simulation
@@ -447,13 +449,16 @@ export default {
           chalk.yellow(this.compiled.sourceFile)
       );
 
-      this.$set(this.compiled.simulation, "gates", {});
+      const newSimulation = {
+        gates: {},
+        clock: [],
+        time: []
+      };
+
       this.compiled.gates.forEach(g => {
         g.state = 0;
-        this.$set(this.compiled.simulation.gates, g.id, []);
+        newSimulation.gates[g.id] = [];
       });
-
-      this.$set(this.compiled.simulation, "clock", []);
 
       var gatesLookup = indexBy(this.compiled.gates, "id");
       var instancesLookup = indexBy(this.compiled.instances, "id");
@@ -464,33 +469,32 @@ export default {
         0
       );
 
-      this.$set(this.compiled.simulation, "time", []);
-      if (gatesLookup["main.clock"]) gatesLookup["main.clock"].state = 0;
+      if (gatesLookup["main_clock"]) gatesLookup["main_clock"].state = 0;
 
       for (let clock = 0; clock <= maxClock; clock++) {
-        this.compiled.simulation.time.push(clock);
+        newSimulation.time.push(clock);
         modulesLookup.main.clock.forEach(c => {
           if (c.time == clock) {
             c.assignments.forEach(a => {
               // can only assign values to control types
-              if (gatesLookup["main." + a.id].logic == "control")
-                gatesLookup["main." + a.id].state = a.value;
+              if (gatesLookup["main_" + a.id].logic == "control")
+                gatesLookup["main_" + a.id].state = a.value;
             });
           }
         });
 
-        if (gatesLookup["main.clock"])
-          gatesLookup["main.clock"].state =
-            ~gatesLookup["main.clock"].state & 1;
+        if (gatesLookup["main_clock"])
+          gatesLookup["main_clock"].state =
+            ~gatesLookup["main_clock"].state & 1; // tick-tock
 
         for (let i = 0; i < this.EVALS_PER_STEP; i++) {
           evaluate(this.compiled.gates, gatesLookup);
         }
         this.compiled.gates.forEach(g => {
-          this.compiled.simulation.gates[g.id].push(gatesLookup[g.id].state);
+          newSimulation.gates[g.id].push(gatesLookup[g.id].state);
         });
 
-        this.compiled.simulation.clock.push(clock % 2);
+        newSimulation.clock.push(clock % 2);
 
         modulesLookup.main.clock.forEach((x, index, all) => {
           if (x.time != clock) return;
@@ -504,9 +508,9 @@ export default {
               shortJoin(x.assignments.map(a => a.id + "=" + a.value)) +
               chalk.cyan(" => ") +
               shortJoin(
-                instancesLookup.main.outputs.map(
-                  o => o.moduleid + "=" + gatesLookup[o.globalid].state
-                )
+                instancesLookup.main.gates
+                  .filter(gateId => gatesLookup[gateId].logic == "response")
+                  .map(o => this.getLocalId(o) + "=" + gatesLookup[o].state)
               )
           );
         });
@@ -514,10 +518,10 @@ export default {
       this.termWriteln(
         chalk.cyan.inverse(" DONE ") + "  Simulated successfully"
       );
-      this.compiled.simulation.maxTime = this.compiled.simulation.time[
-        this.compiled.simulation.time.length - 1
-      ];
-      this.simulationCounter = this.simulationCounter + 1;
+      newSimulation.maxTime = newSimulation.time[newSimulation.time.length - 1];
+      newSimulation.timestamp = Date.now();
+      this.compiled.simulation = newSimulation;
+      console.log("Simulation: ", this.stripReactive(this.compiled.simulation));
     }
   },
   mounted() {

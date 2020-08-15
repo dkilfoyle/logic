@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md q-gutter-md">
-    <q-card
+    <q-card flat bordered
       ><q-card-section>
         <div class="column">
           <div class="q-gutter-y-sm">

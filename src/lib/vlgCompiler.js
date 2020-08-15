@@ -3,7 +3,7 @@ var modules, instances, gates;
 const createInstance = (parentNamespace, instanceDeclaration) => {
   var namespace;
   if (parentNamespace == "") namespace = "main";
-  else namespace = parentNamespace + "." + instanceDeclaration.id;
+  else namespace = parentNamespace + "_" + instanceDeclaration.id;
   const instanceModule = modules[instanceDeclaration.module];
   const varMap = {};
 
@@ -22,13 +22,10 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
 
   // Build varMap - do it now because gates may be referred to before declaration
   instanceModule.wires.forEach(wire => {
-    varMap[wire] = `${namespace}.${wire}`;
+    varMap[wire] = `${namespace}_${wire}`;
   });
   instanceModule.ports.forEach(port => {
-    varMap[port.id] =
-      port.type == "output"
-        ? `${namespace}.${port.id}!` // gates referring to an output port are mapped to port.id{!}
-        : `${namespace}.${port.id}`;
+    varMap[port.id] = `${namespace}_${port.id}`;
   });
 
   // create all the gates defined in the instance's module statements
@@ -51,21 +48,21 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
     });
 
   const evaluateAssignNode = (node, output) => {
-    console.log(`output: ${output}, Type: ${node.type}`);
+    // console.log(`output: ${output}, Type: ${node.type}`);
     let lastOutput;
     if (
       node.type == "BRACKETED_EXPRESSION" ||
       node.type == "ASSIGN_EXPRESSION"
     ) {
       let expr = node.value;
-      console.log(
-        " -- " +
-          expr.map(x => x.type + ":" + JSON.stringify(x.value)).join(", ")
-      );
+      // console.log(
+      //   " -- " +
+      //     expr.map(x => x.type + ":" + JSON.stringify(x.value)).join(", ")
+      // );
 
       // for each operation triplet
       for (let i = 1; i < expr.length; i += 2) {
-        let curOutput = i == expr.length - 2 ? output + "!" : output + "op" + i; // if final operation, connect to output{!}, else a intermediate variable output{op}{i}
+        let curOutput = i == expr.length - 2 ? output : output + "op" + i; // if final operation, connect to output{!}, else a intermediate variable output{op}{i}
 
         if (!varMap[curOutput]) varMap[curOutput] = `${namespace}.${curOutput}`;
 
@@ -95,12 +92,7 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
         if (!varMap["not" + lastOutput]) {
           // add a notA wire (if it doesn't already exist)
           // add a gate: not(notA, A)
-          const newgateID = `${namespace}.not${lastOutput}`;
-          varMap["not" + lastOutput] = newInstance.outputs.some(
-            x => x == newgateID
-          )
-            ? newgateID + "!"
-            : newgateID;
+          varMap["not" + lastOutput] = `${namespace}_not${lastOutput}`;
           gates.push({
             id: varMap["not" + lastOutput],
             logic: "not",
@@ -128,14 +120,19 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
       return evaluateAssignNode(statement.value, statement.id);
     });
 
-  // create a gate for each port
-  // create a gate for each gate in statements
-  // recursively call any child instances
-
   // create a buffer gate for each port in the instance's module definition
+  // each port is mapped to {parentNamespace}_{param.value.id}
+  // input port buffers:
+  //  - have the same name as the port
+  //  - port.input = parentGate
+  // output port buffers:
+  //  - are named port-out
+  //  - port.input = port
+  //  - push port-out to parentGate.inputs
+
   instanceModule.ports.forEach(port => {
     const portGate = {
-      id: `${namespace}.${port.id}`,
+      id: `${namespace}_${port.id}` + (port.type == "output" ? "-out" : ""),
       logic: "buffer",
       instance: namespace,
       inputs: [],
@@ -146,7 +143,7 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
     // connect the input port buffer gate's input to the mapped parent value in the instanceDeclaration parameters
     /*
                            |           |
-      param.value.id ----->| port      | 
+      param.value.id ----->| input     | 
                            |           | 
     */
     if (port.type == "input") {
@@ -155,14 +152,14 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
       );
       if (param) {
         // if the input port is connected
-        portGate.inputs.push(`${parentNamespace}.${param.value.id}`);
+        portGate.inputs.push(`${parentNamespace}_${param.value.id}`);
         newInstance.inputs.push(varMap[port.id]);
       }
     }
 
     /*
-        | input           | port ------> parentGate
-        |           gate! | port ------> parentGate = param.value.id
+        | input           | output-out ------> parentGate
+        |          output | output-out ------> parentGate = param.value.id
         |             ^   | 
         |             |   |
         | varMap[port.id] |
@@ -174,19 +171,18 @@ const createInstance = (parentNamespace, instanceDeclaration) => {
       if (param) {
         // if the output port is connected
 
-        if (port.id == "F3") debugger;
-
-        // connect the mapped parent gate's input back to the output port buffer gate
+        // push the output gate (output-out) to the mapped parent gate's inputs
+        // output-out ------> parentGate = {parentNamespace}_{param.value.id}
         const parentGate = gates.find(
-          gate => gate.id == `${parentNamespace}.${param.value.id}`
+          gate => gate.id == `${parentNamespace}_${param.value.id}`
         );
         if (!parentGate)
           throw new Error(
             `${param.value.id} is not a gate in ${parentNamespace}`
           );
-        parentGate.inputs.push(portGate.id);
+        parentGate.inputs.push(portGate.id); // portGate.id already has -out appended
 
-        // connect the output port buffer gate's input to a gate with the same name + "!" if such a gate exists
+        //  push the gate with the same name as the output into the output port buffer gate's inputs
         const sameNameGate = gates.find(gate => gate.id == varMap[port.id]);
         if (sameNameGate) portGate.inputs.push(varMap[port.id]);
 

@@ -15,6 +15,7 @@
       <div class="col-9 q-gutter-md">
         <div class="row">
           <q-radio v-model="showWhichGates" val="all" label="All" />
+          <q-radio v-model="showWhichGates" val="inputs" label="Inputs" />
           <q-radio v-model="showWhichGates" val="outputs" label="Outputs" />
         </div>
         <q-scroll-area style="height:70vh">
@@ -42,7 +43,6 @@
             </q-markup-table>
           </div></q-scroll-area
         >
-        <p>{{ selectedGates }}</p>
       </div>
     </div>
   </div>
@@ -50,7 +50,7 @@
 
 <script>
 import { debounce } from "quasar";
-import SelectionMixin from "./selections";
+import SelectionMixin from "../mixins/selections";
 
 export default {
   props: ["gates", "instances", "file"],

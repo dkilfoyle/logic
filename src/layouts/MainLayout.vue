@@ -9,7 +9,7 @@
         </q-toolbar-title>
 
         <div>
-          v0.4
+          v0.5
           <a
             href="https://github.com/dkilfoyle/logic"
             rel="noopener"

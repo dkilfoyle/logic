@@ -1,6 +1,7 @@
 <template>
   <div>
     <svg ref="svgSchematic" id="svgSchematic" height="70vh" width="100%" />
+    <!-- <q-btn @click="onSelect">select</q-btn> -->
   </div>
 </template>
 
@@ -8,14 +9,12 @@
 // import * as d3 from "d3";
 // import { HwSchematic } from "./d3-hwschematic";
 
-const stripReactive = x => JSON.parse(JSON.stringify(x));
-const log = x => console.log(stripReactive(x));
-const localid = x => x.substr(x.lastIndexOf(".") + 1);
-const namespace = x => x.substr(0, x.lastIndexOf("."));
+import UtilsMixin from "../mixins/utils";
 
 export default {
   // name: 'ComponentName',
   props: ["compiled"],
+  mixins: [UtilsMixin],
   data() {
     return { elkData: {}, g: {} };
   },
@@ -29,6 +28,9 @@ export default {
     }
   },
   methods: {
+    onSelect() {
+      console.log(this.g.root.select("#node-id-main_foo_X_gate"));
+    },
     getGate(id) {
       let res = this.compiled.gates.find(i => i.id == id);
       if (!res) throw new Error(`getGate(${id}): gate ${id} does not exist`);
@@ -54,33 +56,36 @@ export default {
       };
 
       this.buildInstance(this.elkData);
-      log(this.elkData);
-      console.log(JSON.stringify(this.elkData));
+      console.log("Schematic: ", this.stripReactive(this.elkData));
+      //console.log(JSON.stringify(this.elkData));
+
       this.g.bindData(this.elkData);
+
+      this.$nextTick(() => console.log(d3.select("svg").selectAll(".node")));
     },
     buildInstance(currentNet) {
       const currentInstance = this.getInstance(currentNet.id);
-      console.log(
-        "Building ",
-        currentInstance.id,
-        stripReactive(currentInstance)
-      );
+      // console.log(
+      //   "Building ",
+      //   currentInstance.id,
+      //   this.stripReactive(currentInstance)
+      // );
 
       // build gates of this instance and edges for each of the gates inputs
       // gate inputs might be another gate or an input port
       currentInstance.gates.forEach((gateId, gateCount) => {
         const gate = this.getGate(gateId);
-        log(gate);
 
         const gateNet = {
-          id: gate.id + ".gate",
+          id: gate.id + "_gate",
           hwMeta: {
             maxId: currentNet.hwMeta.maxId + 50 + gateCount,
+            cls_name: "gate",
             name:
               gate.logic == "control" ||
               gate.logic == "buffer" ||
               gate.logic == "response"
-                ? localid(gate.id)
+                ? this.getLocalId(gate.id)
                 : gate.logic.toUpperCase(),
             isExternalPort: gate.logic == "control" || gate.logic == "response"
           },
@@ -97,7 +102,7 @@ export default {
         if (gate.logic != "response") {
           gateNet.ports.push({
             id: gate.id,
-            hwMeta: { name: localid(gate.id) },
+            hwMeta: { name: this.getLocalId(gate.id) },
             direction: "OUTPUT",
             properties: { portSide: "EAST", portIndex: 0 }
           });
@@ -106,7 +111,7 @@ export default {
         gate.inputs.forEach((input, i) => {
           gateNet.ports.push({
             id: gate.id + "_input_" + i,
-            hwMeta: { name: localid(gate.id) },
+            hwMeta: { name: this.getLocalId(gate.id) },
             direction: "INPUT",
             properties: {
               portSide: "WEST",
@@ -115,28 +120,29 @@ export default {
           });
 
           currentNet.edges.push({
-            id: input + " : " + gate.id + "_input_" + i + "YYYY",
+            id: input + "-" + gate.id + "_input_" + i,
+            type: "gate2gate",
             source: this.compiled.gates.some(
               x => x.type == "port" && x.id == gate.inputs[i]
             )
-              ? namespace(gate.inputs[i])
-              : gate.inputs[i] + ".gate", // if the gate input is a port then source is the instance, else source is a gate
+              ? this.getNamespace(gate.inputs[i]) // if the gate input is a port then source is the instance,
+              : gate.inputs[i] + "_gate", // else source is a gate
             sourcePort: gate.inputs[i],
-            target: gate.id + ".gate",
+            target: gate.id + "_gate",
             targetPort: gate.id + "_input_" + i,
             hwMeta: { name: null }
           });
         });
 
         currentNet.children.push(gateNet);
-        console.log("-- Gate: ", gate.id, stripReactive(gateNet));
+        // console.log("-- Gate: ", gate.id, this.stripReactive(gateNet));
       });
 
       // build any sub-instances
       // build edges to connect currentNet mapped values to the sub-instance input ports
       currentInstance.instances.forEach(childInstanceID => {
         const childInstance = this.getInstance(childInstanceID);
-        console.log("-- childInstance: ", childInstanceID, childInstance);
+        // console.log("-- childInstance: ", childInstanceID, childInstance);
         const childNet = {
           id: childInstanceID,
           hwMeta: {
@@ -156,29 +162,27 @@ export default {
         };
 
         childInstance.outputs.forEach(output => {
-          // console.log(`---- Port Output: ${localid(output)} = ${output}`);
+          // console.log(`---- Port Output: ${this.getLocalId(output)} = ${output}`);
           let port = {
-            id: output,
-            hwMeta: { name: localid(output) },
+            id: output, // output will be in form {this.getNamespace}_{port}-out
+            hwMeta: { name: this.getLocalId(output) },
             direction: "OUTPUT",
             properties: { portSide: "EAST", portIndex: 0 }
           };
           childNet.ports.push(port);
 
-          // get the buffer gate for this port the input to which is the final gate (gate!)
+          // get the buffer gate for the output port = output-out
           const portGate = this.getGate(output);
-
-          console.log(portGate);
-
-          var bangGate = portGate.inputs[0].includes("!");
+          const feederGate = this.getGate(
+            output.substr(0, output.indexOf("-out"))
+          );
 
           childNet.edges.push({
-            id: output + "_" + portGate.inputs[0] + "ZZZ",
-            source: bangGate
-              ? portGate.inputs[0] + ".gate"
-              : namespace(portGate.inputs[0]),
+            id: output + "_" + portGate.inputs[0],
+            type: "gate2output",
+            source: portGate.inputs[0] + "_gate",
             sourcePort: portGate.inputs[0],
-            target: namespace(output),
+            target: this.getNamespace(output),
             targetPort: output,
             hwMeta: { name: null }
           });
@@ -186,10 +190,10 @@ export default {
 
         // Build ports for childinstance and connect to currentinstance gates
         childInstance.inputs.forEach((input, i) => {
-          // console.log(`---- Port Input: ${localid(input)} = ${input}`);
+          // console.log(`---- Port Input: ${this.getLocalId(input)} = ${input}`);
           let port = {
             id: input,
-            hwMeta: { name: localid(input), level: 0 },
+            hwMeta: { name: this.getLocalId(input), level: 0 },
             direction: "INPUT",
             properties: { portSide: "WEST", portIndex: i + 1 }
           };
@@ -198,13 +202,14 @@ export default {
           // get the buffer gate for this port
           const portGate = this.getGate(input);
           currentNet.edges.push({
-            id: portGate.inputs[0] + "_" + input + "XXX",
+            id: portGate.inputs[0] + "-" + input,
+            type: "parent2input",
             hwMeta: { name: null },
             source: currentInstance.inputs.some(x => x == portGate.inputs[0]) // is the input to the port gate itself a port of the parent instance rather than a local gate
               ? currentInstance.id
-              : portGate.inputs[0] + ".gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
+              : portGate.inputs[0] + "_gate", // TODO: source might be a gate or a port - ie a pass through, is this handled??
             sourcePort: portGate.inputs[0],
-            target: namespace(input),
+            target: this.getNamespace(input),
             targetPort: input
           });
         });
@@ -260,6 +265,11 @@ text {
   stroke-width: 1px;
   fill: #e6ffff;
   border: 2px;
+}
+
+g.node-operator:hover {
+  fill: red;
+  stroke: red;
 }
 
 .node-operator text {
@@ -327,5 +337,9 @@ body {
   border-radius: 5px;
   padding: 5px;
   position: fixed;
+}
+
+.gate {
+  fill: red;
 }
 </style>

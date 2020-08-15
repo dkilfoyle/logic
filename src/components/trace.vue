@@ -17,6 +17,7 @@
           <q-radio v-model="showWhichGates" val="all" label="All" />
           <q-radio v-model="showWhichGates" val="inputs" label="Inputs" />
           <q-radio v-model="showWhichGates" val="outputs" label="Outputs" />
+          <q-radio v-model="showWhichGates" val="ports" label="Ports" />
         </div>
 
         <div v-if="selectedInstance">
@@ -56,7 +57,7 @@
 </template>
 
 <script>
-import SelectionMixin from "./selections";
+import SelectionMixin from "../mixins/selections";
 import dygraph from "./dygraph";
 
 import _DygraphRoot from "dygraphs";
@@ -100,7 +101,7 @@ export default {
       return {
         height: 50,
         showRangeSelector: false,
-        xrangePad: 5,
+        xRangePad: 5,
         axes: {
           x: {
             drawAxis: false,
@@ -124,9 +125,8 @@ export default {
       };
     },
     traceColor: function(id) {
-      if (this.selectedInstance.outputs.some(x => x == id))
-        return "rgb(255,99,132)";
-      if (this.selectedInstance.inputs.some(x => x == id)) {
+      if (this.isOutput(this.instanceID, id)) return "rgb(255,99,132)";
+      if (this.isInput(this.instanceID, id)) {
         return "steelblue";
       }
 
@@ -134,7 +134,7 @@ export default {
     }
   },
   mounted() {
-    this.syncTraces();
+    // this.syncTraces();
   }
 };
 </script>
