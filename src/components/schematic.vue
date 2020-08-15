@@ -1,7 +1,7 @@
 <template>
   <div>
     <svg ref="svgSchematic" id="svgSchematic" height="70vh" width="100%" />
-    <!-- <q-btn @click="onSelect">select</q-btn> -->
+    <q-btn @click="onSelect">select</q-btn>
   </div>
 </template>
 
@@ -29,7 +29,7 @@ export default {
   },
   methods: {
     onSelect() {
-      console.log(this.g.root.select("#node-id-main_foo_X_gate"));
+      console.log(this.g.root);
     },
     getGate(id) {
       let res = this.compiled.gates.find(i => i.id == id);
@@ -59,9 +59,16 @@ export default {
       console.log("Schematic: ", this.stripReactive(this.elkData));
       //console.log(JSON.stringify(this.elkData));
 
-      this.g.bindData(this.elkData);
-
-      this.$nextTick(() => console.log(d3.select("svg").selectAll(".node")));
+      this.g.bindData(this.elkData).then(() => {
+        // add click handlers to all non-port gates
+        console.log("buildNetList1: ", this.g.root);
+        this.compiled.instances.forEach(instance =>
+          instance.gates.forEach(gateId => {
+            const node = this.g.root.select("#node-id-" + gateId + "_gate");
+            node.on("click", d => console.log(d.id));
+          })
+        );
+      });
     },
     buildInstance(currentNet) {
       const currentInstance = this.getInstance(currentNet.id);
