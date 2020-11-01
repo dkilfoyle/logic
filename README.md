@@ -1,5 +1,7 @@
 # Logic Simulator
 
+** Deprecated: see [Logic 2](https://github.com/dkilfoyle/logic2) **
+
 An IDE for experimentation with Francis Stokes ([Low Level Javascript](https://www.youtube.com/c/LowLevelJavaScript/featured)) [Digital Circuit Simulator](https://github.com/LowLevelJavaScript/Digital-Logic-Simulator)
 
 ![image](https://user-images.githubusercontent.com/4541024/88268260-45b28480-cd26-11ea-8cfc-63bb8d2abe16.png)
